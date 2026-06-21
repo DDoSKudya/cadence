@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import LoginView from "@/features/auth/views/LoginView.vue";
 import HomeView from "@/features/board/views/HomeView.vue";
+import ColumnsSettingsView from "@/features/settings/views/ColumnsSettingsView.vue";
 import { useAuthStore } from "@/stores/auth";
 
 export const router = createRouter({
@@ -11,6 +12,12 @@ export const router = createRouter({
       path: "/",
       name: "home",
       component: HomeView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/settings/columns",
+      name: "settings-columns",
+      component: ColumnsSettingsView,
       meta: { requiresAuth: true },
     },
     {
