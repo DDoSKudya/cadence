@@ -4,6 +4,7 @@ import { computed, onMounted } from "vue";
 import BoardColumn from "@/features/board/components/BoardColumn.vue";
 import BoardCreateTask from "@/features/board/components/BoardCreateTask.vue";
 import BoardFilters from "@/features/board/components/BoardFilters.vue";
+import BoardImportJson from "@/features/board/components/BoardImportJson.vue";
 import TaskPanel from "@/features/board/components/TaskPanel.vue";
 import WeekSwitcher from "@/features/board/components/WeekSwitcher.vue";
 import { useBoardStore } from "@/features/board/stores/board";
@@ -38,6 +39,7 @@ onMounted(async () => {
         <div class="board-toolbar-actions">
           <BoardFilters />
           <WeekSwitcher />
+          <BoardImportJson />
           <BoardCreateTask />
         </div>
       </header>
