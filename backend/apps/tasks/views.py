@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.boards.models import BoardColumn
 from apps.boards.services import ColumnSettingsService
 from apps.tasks.models import Task, TaskEvent
-from apps.tasks.selectors import build_board_payload
+from apps.tasks.selectors import active_tasks_for_board, build_board_payload
 from apps.tasks.serializers import (
     BoardResponseSerializer,
     TaskCloseSerializer,
@@ -37,13 +37,7 @@ class TaskListCreateView(APIView):
         week_value = request.query_params.get("week")
         week = WeekService.resolve_week(week_value)
 
-        tasks = (
-            Task.objects.filter(board=board, archived_at__isnull=True)
-            .filter(week=week)
-            .select_related("week")
-            .prefetch_related("tags")
-            .order_by("column_id", "position")
-        )
+        tasks = active_tasks_for_board(board, week)
         return Response(TaskSerializer(tasks, many=True).data)
 
     def post(self, request: Request):

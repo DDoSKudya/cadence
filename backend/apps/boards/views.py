@@ -73,8 +73,14 @@ class ColumnReorderView(APIView):
         serializer = BoardColumnReorderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         board = ColumnSettingsService.get_default_board()
-        columns = ColumnSettingsService.reorder(
-            board,
-            serializer.validated_data["column_ids"],
-        )
+        try:
+            columns = ColumnSettingsService.reorder(
+                board,
+                serializer.validated_data["column_ids"],
+            )
+        except ValidationError as exc:
+            return Response(
+                {"detail": str(exc.detail)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(BoardColumnSerializer(columns, many=True).data)

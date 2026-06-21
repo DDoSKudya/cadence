@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+import AppLayout from "@/components/layout/AppLayout.vue";
 import LoginView from "@/features/auth/views/LoginView.vue";
-import HomeView from "@/features/board/views/HomeView.vue";
+import BoardView from "@/features/board/views/BoardView.vue";
 import ColumnsSettingsView from "@/features/settings/views/ColumnsSettingsView.vue";
 import { useAuthStore } from "@/stores/auth";
 
@@ -9,21 +10,30 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: "/",
-      name: "home",
-      component: HomeView,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: "/settings/columns",
-      name: "settings-columns",
-      component: ColumnsSettingsView,
-      meta: { requiresAuth: true },
-    },
-    {
       path: "/login",
       name: "login",
       component: LoginView,
+    },
+    {
+      path: "/",
+      component: AppLayout,
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: "",
+          redirect: { name: "board" },
+        },
+        {
+          path: "board",
+          name: "board",
+          component: BoardView,
+        },
+        {
+          path: "settings/columns",
+          name: "settings-columns",
+          component: ColumnsSettingsView,
+        },
+      ],
     },
   ],
 });
@@ -40,7 +50,7 @@ router.beforeEach(async (to) => {
   }
 
   if (to.name === "login" && auth.user) {
-    return { name: "home" };
+    return { name: "board" };
   }
 
   return true;

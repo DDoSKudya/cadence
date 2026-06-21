@@ -4,3 +4,10 @@ declare module "*.vue" {
   const component: DefineComponent<Record<string, never>, Record<string, never>, unknown>;
   export default component;
 }
+
+declare module "vuedraggable" {
+  import type { DefineComponent } from "vue";
+
+  const draggable: DefineComponent<Record<string, unknown>, Record<string, unknown>, unknown>;
+  export default draggable;
+}

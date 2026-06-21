@@ -28,7 +28,7 @@ class Board(models.Model):
     def get_default(cls) -> "Board":
         board, _created = cls.objects.get_or_create(
             slug="main",
-            defaults={"name": "Main", "is_default": True},
+            defaults={"name": "Главная", "is_default": True},
         )
         if not board.is_default:
             board.is_default = True
@@ -79,7 +79,7 @@ class BoardColumn(models.Model):
         indexes = (
             models.Index(
                 fields=["board", "is_active", "position"],
-                name="idx_board_columns_board_active_position",
+                name="idx_bcol_board_act_pos",
             ),
             models.Index(
                 fields=["system_type"],

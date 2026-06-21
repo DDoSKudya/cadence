@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { ArrowRightEndOnRectangleIcon, Squares2X2Icon } from "@heroicons/vue/24/outline";
 
 import { useAuthStore } from "@/stores/auth";
 
@@ -28,43 +29,56 @@ async function submit() {
 </script>
 
 <template>
-  <main class="grid min-h-screen place-items-center bg-slate-50 p-6">
-    <form
-      class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-      @submit.prevent="submit"
-    >
-      <p class="text-sm font-semibold uppercase tracking-wide text-blue-600">Cadence</p>
-      <h1 class="mt-2 text-2xl font-semibold text-slate-900">Вход</h1>
+  <main class="login-shell">
+    <form class="login-panel" @submit.prevent="submit">
+      <div class="mb-6">
+        <div class="mb-4 flex items-center gap-3">
+          <span class="sidebar-mark">
+            <Squares2X2Icon class="icon-md text-white" />
+          </span>
+          <div>
+            <div class="sidebar-title">Cadence</div>
+            <div class="sidebar-subtitle">Недельный ритм</div>
+          </div>
+        </div>
+        <h1 class="text-xl font-semibold text-[var(--color-text)]">Вход</h1>
+        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
+          Личная канбан-доска для недельного ритма.
+        </p>
+      </div>
 
-      <label class="mt-6 block text-sm font-medium text-slate-700">
+      <label class="block text-sm text-[var(--color-text-secondary)]">
         Логин
         <input
           v-model="username"
-          class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
+          class="field mt-1.5 px-3 py-2"
           autocomplete="username"
           required
           type="text"
         />
       </label>
 
-      <label class="mt-4 block text-sm font-medium text-slate-700">
+      <label class="mt-3 block text-sm text-[var(--color-text-secondary)]">
         Пароль
         <input
           v-model="password"
-          class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
+          class="field mt-1.5 px-3 py-2"
           autocomplete="current-password"
           required
           type="password"
         />
       </label>
 
-      <p v-if="error" class="mt-4 text-sm text-red-600">{{ error }}</p>
+      <p v-if="error" class="alert-error mt-4">
+        {{ error }}
+      </p>
 
       <button
-        class="mt-6 w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white disabled:opacity-60"
+        class="btn-primary mt-5 w-full px-4 py-2.5 disabled:opacity-60"
         :disabled="isSubmitting"
         type="submit"
       >
+        <ArrowRightEndOnRectangleIcon class="icon-sm" />
         Войти
       </button>
     </form>
