@@ -1,3 +1,5 @@
+from celery.schedules import crontab
+
 from .environment import env, repo_root
 
 REPO_ROOT = repo_root()
@@ -20,6 +22,7 @@ INSTALLED_APPS = [
     "apps.boards.apps.BoardsConfig",
     "apps.weeks.apps.WeeksConfig",
     "apps.tasks.apps.TasksConfig",
+    "apps.imports.apps.ImportsConfig",
 ]
 
 MIDDLEWARE = [
@@ -101,6 +104,13 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+CELERY_BEAT_SCHEDULE = {
+    "scan-json-inbox": {
+        "task": "apps.imports.tasks.scan_json_inbox",
+        "schedule": crontab(minute="*/1"),
+    },
+}
 
 TELEGRAM_ENABLED = env("TELEGRAM_ENABLED")
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
