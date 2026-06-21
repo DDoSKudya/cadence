@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.common.apps.CommonConfig",
     "apps.core.apps.CoreConfig",
+    "apps.boards.apps.BoardsConfig",
 ]
 
 MIDDLEWARE = [
