@@ -8,6 +8,8 @@ from django.utils.text import slugify
 
 
 class ApiKey(models.Model):
+    id: int
+
     name = models.CharField(max_length=100)
     prefix = models.CharField(max_length=12, unique=True, editable=False)
     key_hash = models.CharField(max_length=128)
@@ -16,7 +18,7 @@ class ApiKey(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self) -> str:
         return self.name
@@ -46,6 +48,8 @@ class ApiKey(models.Model):
 
 
 class ProjectSettings(models.Model):
+    id: int
+
     timezone = models.CharField(max_length=64, default=settings.TIME_ZONE)
     json_inbox_enabled = models.BooleanField(default=True)
     telegram_enabled = models.BooleanField(default=False)
@@ -72,6 +76,8 @@ class ProjectSettings(models.Model):
 
 
 class Tag(models.Model):
+    id: int
+
     name = models.CharField(max_length=50)
     slug = models.SlugField(max_length=60, unique=True, blank=True)
     color = models.CharField(max_length=20, blank=True, default="#64748b")
@@ -79,7 +85,7 @@ class Tag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self) -> str:
         return self.name

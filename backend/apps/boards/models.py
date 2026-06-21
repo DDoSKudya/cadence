@@ -3,6 +3,8 @@ from django.db.models import Q
 
 
 class Board(models.Model):
+    id: int
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     is_default = models.BooleanField(default=False)
@@ -10,14 +12,14 @@ class Board(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
-        constraints = [
+        ordering = ("name",)
+        constraints = (
             models.UniqueConstraint(
                 fields=["is_default"],
                 condition=Q(is_default=True),
                 name="uq_boards_single_default",
             ),
-        ]
+        )
 
     def __str__(self) -> str:
         return self.name
@@ -44,6 +46,9 @@ class SystemType(models.TextChoices):
 
 
 class BoardColumn(models.Model):
+    id: int
+    board_id: int
+
     board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="columns")
     name = models.CharField(max_length=100)
     system_type = models.CharField(max_length=20, choices=SystemType.choices)
@@ -55,8 +60,8 @@ class BoardColumn(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["position"]
-        constraints = [
+        ordering = ("position",)
+        constraints = (
             models.CheckConstraint(
                 condition=Q(position__gte=0),
                 name="chk_board_columns_position_non_negative",
@@ -70,7 +75,17 @@ class BoardColumn(models.Model):
                 condition=Q(is_active=True),
                 name="uq_board_columns_board_position_active",
             ),
-        ]
+        )
+        indexes = (
+            models.Index(
+                fields=["board", "is_active", "position"],
+                name="idx_board_columns_board_active_position",
+            ),
+            models.Index(
+                fields=["system_type"],
+                name="idx_board_columns_system_type",
+            ),
+        )
 
     def __str__(self) -> str:
         return self.name

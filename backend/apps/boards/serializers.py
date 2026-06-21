@@ -6,7 +6,7 @@ from apps.boards.models import BoardColumn
 class BoardColumnSerializer(serializers.ModelSerializer):
     class Meta:
         model = BoardColumn
-        fields = [
+        fields = (
             "id",
             "name",
             "system_type",
@@ -16,15 +16,15 @@ class BoardColumnSerializer(serializers.ModelSerializer):
             "wip_limit",
             "created_at",
             "updated_at",
-        ]
-        read_only_fields = [
+        )
+        read_only_fields = (
             "id",
             "system_type",
             "position",
             "is_active",
             "created_at",
             "updated_at",
-        ]
+        )
 
 
 class BoardColumnCreateSerializer(serializers.Serializer):

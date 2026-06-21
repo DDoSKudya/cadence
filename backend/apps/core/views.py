@@ -14,7 +14,7 @@ from apps.core.serializers import (
 
 
 class LoginView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={"request": request})
@@ -25,7 +25,7 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         logout(request)
@@ -33,7 +33,7 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         return Response(UserSerializer(request.user).data)

@@ -128,7 +128,7 @@ class ColumnSettingsService:
         if not django_apps.is_installed("apps.tasks"):
             return False
 
-        task_model = django_apps.get_model("apps.tasks", "Task")
+        task_model = django_apps.get_model("tasks", "Task")
         return task_model.objects.filter(
             column_id=column_id,
             archived_at__isnull=True,
