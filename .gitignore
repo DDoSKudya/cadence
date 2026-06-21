@@ -18,6 +18,7 @@ coverage.xml
 htmlcov/
 .venv/
 venv/
+celerybeat-schedule
 
 # Django
 staticfiles/
@@ -25,7 +26,7 @@ media/
 
 # Node
 node_modules/
-dist/
+frontend/dist/
 .vite/
 coverage/
 npm-debug.log*

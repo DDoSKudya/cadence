@@ -3,7 +3,7 @@ COMPOSE = docker compose
 .PHONY: dev up down logs migrate createsuperuser test-backend test-frontend verify worker beat
 
 dev:
-	$(COMPOSE) up --build
+	$(COMPOSE) --profile dev up --build
 
 up:
 	$(COMPOSE) up -d --build
