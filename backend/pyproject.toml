@@ -14,7 +14,7 @@ dependencies = [
     "drf-spectacular",
     "gunicorn",
     "openpyxl",
-    "psycopg",
+    "psycopg[binary]",
 ]
 
 [dependency-groups]
@@ -51,3 +51,17 @@ strict = false
 
 [tool.django-stubs]
 django_settings_module = "cadence.settings.test"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["."]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+
+[tool.basedpyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["."]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"

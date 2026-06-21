@@ -1,6 +1,7 @@
 from .base import *  # noqa: F403
+from .environment import env
 
-DEBUG = True
+DEBUG: bool = env.bool("DJANGO_DEBUG", True)
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
