@@ -125,7 +125,7 @@ class Task(models.Model):
             models.Index(
                 fields=["board", "column", "position"],
                 condition=Q(archived_at__isnull=True),
-                name="idx_tasks_board_column_position_active",
+                name="idx_task_brd_col_pos_act",
             ),
             models.Index(
                 fields=["week", "archived_at", "column", "position"],
@@ -157,7 +157,7 @@ class Task(models.Model):
             models.Index(
                 fields=["column", "column_entered_at"],
                 condition=Q(archived_at__isnull=True),
-                name="idx_tasks_column_entered_active",
+                name="idx_task_col_entered_act",
             ),
         )
 

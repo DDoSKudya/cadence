@@ -168,7 +168,7 @@ def test_board_groups_tasks_by_columns(api_client_auth, backlog_column, planned_
 
     assert response.status_code == 200
     data = response.json()
-    assert data["board"]["name"] == "Main"
+    assert data["board"]["name"] == "Главная"
     assert len(data["columns"]) == 4
 
     backlog = next(item for item in data["columns"] if item["system_type"] == "backlog")
@@ -233,6 +233,31 @@ def test_cannot_deactivate_column_with_active_tasks(api_client_auth, backlog_col
 
     assert response.status_code == 409
     assert BoardColumn.objects.filter(pk=backlog_column.id, is_active=True).exists()
+
+
+@pytest.mark.django_db
+def test_task_list_includes_weekless_tasks_for_selected_week(
+    api_client_auth,
+    backlog_column,
+):
+    client, _api_key = api_client_auth
+    week = WeekService.get_or_create_current_week()
+    create_task(client, title="Weekless", column_id=backlog_column.id)
+    create_task(
+        client,
+        title="Week task",
+        column_id=backlog_column.id,
+        week=f"{week.iso_year}-W{week.iso_week:02d}",
+    )
+
+    response = client.get(
+        reverse("task-list"),
+        {"week": f"{week.iso_year}-W{week.iso_week:02d}"},
+    )
+
+    assert response.status_code == 200
+    titles = {item["title"] for item in response.json()}
+    assert titles == {"Weekless", "Week task"}
 
 
 @pytest.mark.django_db
