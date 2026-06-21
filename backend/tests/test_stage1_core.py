@@ -49,7 +49,7 @@ def test_api_key_allows_settings_access(client):
 
 @pytest.mark.django_db
 def test_seed_tags_are_available(client):
-    api_key, raw_key = ApiKey.issue("ui")
+    _api_key, raw_key = ApiKey.issue("ui")
 
     response = client.get(
         reverse("tag-list"),

@@ -25,13 +25,13 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "is_staff"]
+        fields = ("id", "username", "email", "first_name", "last_name", "is_staff")
 
 
 class ProjectSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectSettings
-        fields = [
+        fields = (
             "timezone",
             "json_inbox_enabled",
             "telegram_enabled",
@@ -39,12 +39,12 @@ class ProjectSettingsSerializer(serializers.ModelSerializer):
             "quiet_hours_start",
             "quiet_hours_end",
             "updated_at",
-        ]
-        read_only_fields = ["updated_at"]
+        )
+        read_only_fields = ("updated_at",)
 
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ["id", "name", "slug", "color", "is_active", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        fields = ("id", "name", "slug", "color", "is_active", "created_at")
+        read_only_fields = ("id", "created_at")

@@ -195,7 +195,7 @@ onMounted(loadColumns);
       <form class="mt-6 flex flex-wrap gap-3" @submit.prevent="addColumn">
         <input
           v-model="newName"
-          class="min-w-[200px] flex-1 rounded-lg border border-slate-300 px-3 py-2"
+          class="min-w-50 flex-1 rounded-lg border border-slate-300 px-3 py-2"
           placeholder="Новая колонка"
           type="text"
         />

@@ -61,7 +61,8 @@ class ColumnDetailView(APIView):
         try:
             ColumnSettingsService.deactivate(column)
         except ValidationError as exc:
-            if exc.get_codes() == "column_has_tasks":
+            codes = exc.get_codes()
+            if codes in ("column_has_tasks", ["column_has_tasks"]):
                 return Response({"detail": exc.detail}, status=status.HTTP_409_CONFLICT)
             raise
         return Response(status=status.HTTP_204_NO_CONTENT)

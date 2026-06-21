@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "apps.common.apps.CommonConfig",
     "apps.core.apps.CoreConfig",
     "apps.boards.apps.BoardsConfig",
+    "apps.weeks.apps.WeeksConfig",
+    "apps.tasks.apps.TasksConfig",
 ]
 
 MIDDLEWARE = [
