@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -11,6 +12,9 @@ class ImportValidationError(Exception):
 
 SUPPORTED_SCHEMA_VERSION = "1.0"
 VALID_PRIORITIES = frozenset({"low", "normal", "high"})
+WEEK_PATTERN = re.compile(r"^\d{4}-W\d{2}$")
+ISO_WEEK_MIN = 1
+ISO_WEEK_MAX = 53
 
 
 @dataclass(frozen=True)
@@ -59,9 +63,7 @@ def validate_import_payload(data: Any) -> ImportFilePayload:
         raise ImportValidationError("source must be a string")
     source_label = (source_label or "json_import").strip() or "json_import"
 
-    week = data.get("week")
-    if week is not None and not isinstance(week, str):
-        raise ImportValidationError("week must be a string")
+    week = _validate_week(data.get("week"))
 
     tasks = [_validate_task(item, index) for index, item in enumerate(tasks_raw)]
     return ImportFilePayload(
@@ -145,6 +147,23 @@ def _validate_task(raw: Any, index: int) -> ImportTaskPayload:
         reminder_enabled=reminder_enabled,
         external_ref=external_ref.strip(),
     )
+
+
+def _validate_week(raw: Any) -> str | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise ImportValidationError("week must be a string")
+
+    value = raw.strip()
+    if not WEEK_PATTERN.match(value):
+        raise ImportValidationError("invalid week format")
+
+    iso_week = int(value.split("-W", 1)[1])
+    if iso_week < ISO_WEEK_MIN or iso_week > ISO_WEEK_MAX:
+        raise ImportValidationError("invalid week format")
+
+    return value
 
 
 def _parse_due_at(raw: Any, index: int) -> datetime | None:

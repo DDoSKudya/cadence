@@ -1,6 +1,7 @@
 import hashlib
 import json
 import shutil
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,7 +10,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.utils import DatabaseError, OperationalError
 from django.utils import timezone
-from django.utils.text import slugify
+from django.utils.text import get_valid_filename, slugify
 
 from apps.boards.models import BoardColumn
 from apps.boards.services import ColumnSettingsService
@@ -75,14 +76,35 @@ class JsonImportService:
 
         pending_path = paths.pending / filename
         if not pending_path.exists():
-            failed_path = paths.failed / filename
-            if failed_path.exists():
-                return JsonImportService.retry_failed_file(filename)
             raise FileNotFoundError(filename)
 
         processing_path = paths.processing / filename
         shutil.move(pending_path, processing_path)
         return JsonImportService._process_at_path(processing_path, filename)
+
+    @staticmethod
+    def upload_and_process(original_name: str, content: bytes) -> ImportProcessResult:
+        paths = InboxPaths.from_settings()
+        paths.ensure_dirs()
+
+        filename = JsonImportService._upload_filename(original_name)
+        pending_path = paths.pending / filename
+        pending_path.write_bytes(content)
+        return JsonImportService.process_file(filename)
+
+    @staticmethod
+    def _upload_filename(original_name: str) -> str:
+        filename = get_valid_filename(Path(original_name).name)
+        if not filename.lower().endswith(".json"):
+            raise ImportValidationError("file must have .json extension")
+
+        paths = InboxPaths.from_settings()
+        pending_path = paths.pending / filename
+        if pending_path.exists():
+            stem = filename[:-5]
+            filename = f"{stem}-{uuid.uuid4().hex[:8]}.json"
+
+        return filename
 
     @staticmethod
     def retry_import(import_log: ImportLog) -> ImportProcessResult:
@@ -140,8 +162,16 @@ class JsonImportService:
 
         duplicate = JsonImportService._find_duplicate(payload, checksum)
         if duplicate is not None:
-            JsonImportService._move_file(file_path, paths.processed / filename)
-            return ImportProcessResult(import_log=duplicate, skipped_duplicate=True)
+            processed_path = paths.processed / filename
+            JsonImportService._move_file(file_path, processed_path)
+            skip_log = JsonImportService._log_duplicate_skip(
+                filename=filename,
+                processed_path=processed_path,
+                checksum=checksum,
+                payload=payload,
+                duplicate=duplicate,
+            )
+            return ImportProcessResult(import_log=skip_log, skipped_duplicate=True)
 
         try:
             return JsonImportService._import_payload(
@@ -306,18 +336,33 @@ class JsonImportService:
         return ImportProcessResult(import_log=import_log)
 
     @staticmethod
-    def retry_failed_file(filename: str) -> ImportProcessResult:
-        import_log = (
-            ImportLog.objects.filter(
-                filename=filename,
-                status=ImportStatus.FAILED,
-            )
-            .order_by("-created_at")
-            .first()
+    def _log_duplicate_skip(
+        *,
+        filename: str,
+        processed_path: Path,
+        checksum: str,
+        payload: ImportFilePayload,
+        duplicate: ImportLog,
+    ) -> ImportLog:
+        if ImportLog.objects.filter(
+            checksum=checksum,
+            status__in=[ImportStatus.SUCCEEDED, ImportStatus.SKIPPED_DUPLICATE],
+        ).exists():
+            return duplicate
+
+        now = timezone.now()
+        return ImportLog.objects.create(
+            filename=filename,
+            original_path=str(processed_path),
+            checksum=checksum,
+            idempotency_key=None,
+            schema_version=payload.schema_version,
+            source_label=payload.source_label,
+            status=ImportStatus.SKIPPED_DUPLICATE,
+            error_message=f"duplicate of import #{duplicate.id}",
+            started_at=now,
+            finished_at=now,
         )
-        if import_log is None:
-            raise FileNotFoundError(filename)
-        return JsonImportService.retry_import(import_log)
 
     @staticmethod
     def _find_duplicate(payload: ImportFilePayload, checksum: str) -> ImportLog | None:

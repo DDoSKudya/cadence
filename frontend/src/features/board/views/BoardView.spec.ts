@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import BoardView from "./BoardView.vue";
 
+vi.mock("@/features/board/components/BoardCreateTask.vue", () => ({
+  default: { template: "<div />" },
+}));
+vi.mock("@/features/board/components/BoardImportJson.vue", () => ({
+  default: { template: "<div />" },
+}));
 vi.mock("@/features/board/components/BoardColumn.vue", () => ({
   default: { template: "<div />", props: ["column"] },
 }));

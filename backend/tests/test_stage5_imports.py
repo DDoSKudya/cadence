@@ -1,10 +1,11 @@
 import json
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from apps.core.models import ApiKey
-from apps.imports.models import ImportStatus
+from apps.imports.models import ImportLog, ImportStatus
 from apps.imports.services import JsonImportService
 from apps.tasks.models import Task
 
@@ -115,21 +116,45 @@ def test_duplicate_idempotency_key_is_skipped(inbox_dirs):
     result = JsonImportService.process_file("second.json")
 
     assert result.skipped_duplicate is True
+    assert result.import_log.status == ImportStatus.SUCCEEDED
     assert Task.objects.filter(source="json_import").count() == 1
     assert (inbox_dirs["processed"] / "second.json").exists()
 
 
 @pytest.mark.django_db
-def test_same_file_bytes_are_skipped(inbox_dirs):
-    payload = sample_payload(idempotency_key="same-bytes")
-    write_import_file(inbox_dirs["pending"], "first.json", payload)
+def test_duplicate_key_different_content_creates_skip_log(inbox_dirs):
+    write_import_file(
+        inbox_dirs["pending"],
+        "first.json",
+        sample_payload(idempotency_key="dup-key", tasks=[{"title": "First task"}]),
+    )
     JsonImportService.process_file("first.json")
 
-    write_import_file(inbox_dirs["pending"], "second.json", payload)
+    write_import_file(
+        inbox_dirs["pending"],
+        "second.json",
+        sample_payload(idempotency_key="dup-key", tasks=[{"title": "Second task"}]),
+    )
     result = JsonImportService.process_file("second.json")
 
     assert result.skipped_duplicate is True
+    assert result.import_log.status == ImportStatus.SKIPPED_DUPLICATE
     assert Task.objects.filter(source="json_import").count() == 1
+    assert ImportLog.objects.filter(status=ImportStatus.SKIPPED_DUPLICATE).count() == 1
+
+
+@pytest.mark.django_db
+def test_invalid_week_fails_import(inbox_dirs):
+    write_import_file(
+        inbox_dirs["pending"],
+        "week.json",
+        sample_payload(idempotency_key="bad-week", week="2026-W99"),
+    )
+
+    result = JsonImportService.process_file("week.json")
+
+    assert result.import_log.status == ImportStatus.FAILED
+    assert "invalid week format" in result.import_log.error_message
 
 
 @pytest.mark.django_db
@@ -166,6 +191,27 @@ def test_import_list_and_scan_api(api_client_auth, inbox_dirs):
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
     assert list_response.json()[0]["status"] == ImportStatus.SUCCEEDED
+
+
+@pytest.mark.django_db
+def test_upload_import_api(api_client_auth, inbox_dirs):
+    client, _api_key = api_client_auth
+    payload = sample_payload(idempotency_key="upload-api")
+    response = client.post(
+        reverse("import-upload"),
+        {
+            "file": SimpleUploadedFile(
+                "upload.json",
+                json.dumps(payload).encode(),
+                content_type="application/json",
+            ),
+        },
+        format="multipart",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == ImportStatus.SUCCEEDED
+    assert Task.objects.filter(source="json_import").count() == 1
 
 
 @pytest.mark.django_db

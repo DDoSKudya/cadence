@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "idempotency_key": "mentor-2026-W25",
+  "source": "mentor-notes",
+  "week": "2026-W25",
+  "tasks": [
+    {
+      "title": "Разобрать Celery Beat",
+      "description": "Прочитать материал и сделать конспект",
+      "tags": ["backend", "course"],
+      "column": "planned",
+      "priority": "high",
+      "due_at": "2026-06-25T18:00:00+03:00",
+      "evidence_url": null,
+      "reminder_enabled": true,
+      "external_ref": "mentor-task-42"
+    }
+  ]
+}
