@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import {
   ArrowLeftStartOnRectangleIcon,
   Cog6ToothIcon,
+  InboxArrowDownIcon,
   Squares2X2Icon,
   ViewColumnsIcon,
 } from "@heroicons/vue/24/outline";
@@ -64,6 +65,10 @@ async function logout() {
         <RouterLink active-class="nav-link-active" class="nav-link" to="/settings/columns">
           <Cog6ToothIcon class="icon-md" />
           Колонки
+        </RouterLink>
+        <RouterLink active-class="nav-link-active" class="nav-link" to="/imports">
+          <InboxArrowDownIcon class="icon-md" />
+          Импорт
         </RouterLink>
       </nav>
 

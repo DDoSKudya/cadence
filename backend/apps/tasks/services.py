@@ -50,6 +50,7 @@ class TaskCreateInput:
     reminder_enabled: bool = True
     reminder_interval_minutes: int | None = None
     created_by: User | None = None
+    external_ref: str = ""
 
 
 @dataclass(frozen=True)
@@ -94,6 +95,7 @@ class TaskCreationService:
             reminder_enabled=data.reminder_enabled,
             reminder_interval_minutes=data.reminder_interval_minutes,
             created_by=data.created_by,
+            external_ref=data.external_ref,
         )
         TaskCreationService._apply_reminder_schedule(task)
         TaskCreationService._set_tags(task, data.tag_slugs or [])
