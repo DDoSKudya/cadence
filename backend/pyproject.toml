@@ -1,0 +1,53 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Cadence backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram",
+    "celery",
+    "django",
+    "django-environ",
+    "django-unfold",
+    "djangorestframework",
+    "drf-spectacular",
+    "gunicorn",
+    "openpyxl",
+    "psycopg",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs",
+    "djangorestframework-stubs",
+    "factory-boy",
+    "mypy",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-django",
+    "ruff",
+    "time-machine",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "cadence.settings.test"
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests", "apps"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+ignore_missing_imports = true
+strict = false
+
+[tool.django-stubs]
+django_settings_module = "cadence.settings.test"

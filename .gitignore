@@ -1,0 +1,53 @@
+.plan/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+
+# Django
+staticfiles/
+media/
+
+# Node
+node_modules/
+dist/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local data
+data/task-inbox/pending/*
+data/task-inbox/processing/*
+data/task-inbox/processed/*
+data/task-inbox/failed/*
+!data/task-inbox/pending/.gitkeep
+!data/task-inbox/processing/.gitkeep
+!data/task-inbox/processed/.gitkeep
+!data/task-inbox/failed/.gitkeep
+logs/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
