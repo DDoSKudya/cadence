@@ -18,7 +18,7 @@ services:
     command: >
       sh -c "uv sync --frozen --no-dev &&
       uv run python manage.py migrate --noinput &&
-      uv run gunicorn cadence.wsgi:application --bind 0.0.0.0:8000"
+      uv run gunicorn cadence.wsgi:application --bind 0.0.0.0:8000 --reload"
     environment:
       CADENCE_REPO_ROOT: /workspace
       DJANGO_SETTINGS_MODULE: cadence.settings.dev
@@ -139,6 +139,33 @@ services:
         required: false
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - .:/workspace
+
+  telegram-bot:
+    profiles: ["telegram", "dev"]
+    build:
+      context: ./backend
+    working_dir: /workspace/backend
+    restart: unless-stopped
+    command: >
+      sh -c "uv sync --frozen --no-dev &&
+      uv run python manage.py run_telegram_bot"
+    environment:
+      CADENCE_REPO_ROOT: /workspace
+      DJANGO_SETTINGS_MODULE: cadence.settings.dev
+      UV_PROJECT_ENVIRONMENT: /opt/venv
+    env_file:
+      - path: .env.example
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy

@@ -4,6 +4,9 @@ from django.db import models
 class JobType(models.TextChoices):
     JSON_INBOX_SCAN = "json_inbox_scan", "JSON inbox scan"
     JSON_IMPORT_FILE = "json_import_file", "JSON import file"
+    NOTIFICATION_SCAN = "notification_scan", "Notification scan"
+    TELEGRAM_SEND = "telegram_send", "Telegram send"
+    TELEGRAM_CALLBACK = "telegram_callback", "Telegram callback"
 
 
 class JobStatus(models.TextChoices):

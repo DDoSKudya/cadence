@@ -4,6 +4,7 @@ import AppLayout from "@/components/layout/AppLayout.vue";
 import LoginView from "@/features/auth/views/LoginView.vue";
 import BoardView from "@/features/board/views/BoardView.vue";
 import ColumnsSettingsView from "@/features/settings/views/ColumnsSettingsView.vue";
+import NotificationsSettingsView from "@/features/settings/views/NotificationsSettingsView.vue";
 import JobsView from "@/features/jobs/views/JobsView.vue";
 import { useAuthStore } from "@/stores/auth";
 
@@ -33,6 +34,15 @@ export const router = createRouter({
           path: "settings/columns",
           name: "settings-columns",
           component: ColumnsSettingsView,
+        },
+        {
+          path: "settings/notifications",
+          name: "settings-notifications",
+          component: NotificationsSettingsView,
+        },
+        {
+          path: "settings/telegram",
+          redirect: { name: "settings-notifications" },
         },
         {
           path: "jobs",

@@ -9,8 +9,10 @@ from apps.core.serializers import (
     LoginSerializer,
     ProjectSettingsSerializer,
     TagSerializer,
+    TelegramBotCheckSerializer,
     UserSerializer,
 )
+from apps.core.telegram_check import run_telegram_bot_check
 
 
 class LoginView(APIView):
@@ -44,6 +46,25 @@ class ProjectSettingsView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return ProjectSettings.load()
+
+
+class TelegramBotCheckView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        serializer = TelegramBotCheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        settings_obj = ProjectSettings.load()
+        token = serializer.validated_data.get("telegram_bot_token")
+        result = run_telegram_bot_check(settings_obj, token=token)
+        return Response(
+            {
+                "ok": result.ok,
+                "message": result.message,
+                "checked_at": result.checked_at,
+                "bot_username": result.bot_username,
+            },
+        )
 
 
 class TagListCreateView(generics.ListCreateAPIView):

@@ -33,7 +33,13 @@ class ApiKeyAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectSettings)
 class ProjectSettingsAdmin(admin.ModelAdmin):
-    list_display = ("timezone", "json_inbox_enabled", "telegram_enabled", "updated_at")
+    list_display = (
+        "timezone",
+        "json_inbox_enabled",
+        "telegram_enabled",
+        "telegram_bot_username",
+        "updated_at",
+    )
 
     def has_add_permission(self, request) -> bool:
         return not ProjectSettings.objects.exists()

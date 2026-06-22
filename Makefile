@@ -1,12 +1,19 @@
 COMPOSE = docker compose
+COMPOSE_DEV = $(COMPOSE) --profile dev
 
-.PHONY: dev up down logs migrate createsuperuser test-backend test-frontend verify worker beat
+.PHONY: dev dev-reset up down logs migrate createsuperuser test-backend test-frontend verify worker beat
 
 dev:
-	$(COMPOSE) --profile dev up --build
+	$(COMPOSE_DEV) up --build --remove-orphans
+
+dev-reset:
+	$(COMPOSE_DEV) down --remove-orphans
+	-docker rm -f $$(docker ps -aq --filter "name=cadence-") 2>/dev/null
+	docker network prune -f
+	$(COMPOSE_DEV) up --build
 
 up:
-	$(COMPOSE) up -d --build
+	$(COMPOSE) up -d --build --remove-orphans
 
 down:
 	$(COMPOSE) down

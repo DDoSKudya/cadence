@@ -86,6 +86,13 @@ def test_move_task_between_columns(api_client_auth, backlog_column, planned_colu
     assert response.status_code == 200
     assert response.json()["column_id"] == planned_column.id
     assert response.json()["position"] == 0
+
+    from apps.tasks.models import Task
+
+    task = Task.objects.get(pk=task_id)
+    assert task.column_id == planned_column.id
+    assert task.position == 0
+
     assert TaskEvent.objects.filter(
         task_id=task_id,
         event_type=TaskEventType.MOVED,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import NotRequired, TypedDict
 
 from django.contrib.auth.models import User
@@ -11,7 +11,8 @@ from rest_framework.request import Request
 
 from apps.boards.models import Board, BoardColumn, SystemType
 from apps.boards.services import ColumnSettingsService
-from apps.core.models import ProjectSettings, Tag
+from apps.core.models import Tag
+from apps.notifications.scheduling import schedule_next_reminder
 from apps.tasks.events import (
     EventActor,
     record_request_event,
@@ -97,7 +98,7 @@ class TaskCreationService:
             created_by=data.created_by,
             external_ref=data.external_ref,
         )
-        TaskCreationService._apply_reminder_schedule(task)
+        schedule_next_reminder(task)
         TaskCreationService._set_tags(task, data.tag_slugs or [])
         record_task_event(
             task,
@@ -117,20 +118,6 @@ class TaskCreationService:
             archived_at__isnull=True,
         ).aggregate(max_position=Max("position"))["max_position"]
         return 0 if max_position is None else max_position + 1
-
-    @staticmethod
-    def _apply_reminder_schedule(task: Task) -> None:
-        if not task.reminder_enabled:
-            task.next_reminder_at = None
-            task.save(update_fields=["next_reminder_at"])
-            return
-
-        interval = task.reminder_interval_minutes
-        if interval is None:
-            interval = ProjectSettings.load().default_reminder_interval_minutes
-
-        task.next_reminder_at = timezone.now() + timedelta(minutes=interval)
-        task.save(update_fields=["next_reminder_at"])
 
     @staticmethod
     def _set_tags(task: Task, tag_slugs: list[str]) -> None:
@@ -163,7 +150,7 @@ class TaskUpdateService:
             data.reminder_enabled is not None
             or data.reminder_interval_minutes is not None
         ):
-            TaskCreationService._apply_reminder_schedule(task)
+            schedule_next_reminder(task)
 
         if data.tag_slugs is not None:
             TaskCreationService._set_tags(task, data.tag_slugs)
@@ -238,6 +225,22 @@ class TaskMoveService:
         target_position: int,
         request: Request,
     ) -> Task:
+        return TaskMoveService.move_with_actor(
+            task,
+            target_column=target_column,
+            target_position=target_position,
+            actor=resolve_request_context(request),
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def move_with_actor(
+        task: Task,
+        *,
+        target_column: BoardColumn,
+        target_position: int,
+        actor: EventActor,
+    ) -> Task:
         if task.archived_at is not None:
             raise ValidationError("Archived task cannot be moved.")
 
@@ -258,10 +261,10 @@ class TaskMoveService:
                 target_position=target_position,
             )
 
-        record_request_event(
+        record_task_event(
             task,
             TaskEventType.MOVED,
-            request,
+            actor=actor,
             payload={
                 "from_column_id": source_column.id,
                 "to_column_id": target_column.id,
@@ -279,10 +282,13 @@ class TaskMoveService:
         )
 
     @staticmethod
-    def _save_positions(tasks: list[Task]) -> None:
+    def _save_positions(tasks: list[Task], *, moved_task: Task | None = None) -> None:
         for index, item in enumerate(tasks):
             item.position = index
-            item.save(update_fields=["position", "updated_at"])
+            update_fields = ["position", "updated_at"]
+            if moved_task is not None and item.pk == moved_task.pk:
+                update_fields.extend(["column_id", "column_entered_at"])
+            item.save(update_fields=update_fields)
 
     @staticmethod
     def _reorder_within_column(task: Task, target_position: int) -> None:
@@ -310,7 +316,7 @@ class TaskMoveService:
         task.column = target_column
         task.column_entered_at = timezone.now()
         target_tasks.insert(target_position, task)
-        TaskMoveService._save_positions(target_tasks)
+        TaskMoveService._save_positions(target_tasks, moved_task=task)
 
 
 class TaskCloseService:
@@ -322,6 +328,22 @@ class TaskCloseService:
         completion_note: str = "",
         evidence_url: str | None = None,
         request: Request,
+    ) -> Task:
+        return TaskCloseService.close_with_actor(
+            task,
+            completion_note=completion_note,
+            evidence_url=evidence_url,
+            actor=resolve_request_context(request),
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def close_with_actor(
+        task: Task,
+        *,
+        completion_note: str = "",
+        evidence_url: str | None = None,
+        actor: EventActor,
     ) -> Task:
         if task.archived_at is not None:
             raise ValidationError("Task is already closed.")
@@ -336,11 +358,11 @@ class TaskCloseService:
 
         from_column_id = task.column_id
         if task.column_id != done_column.id:
-            TaskMoveService.move(
+            TaskMoveService.move_with_actor(
                 task,
                 target_column=done_column,
                 target_position=TaskCreationService._next_position(done_column),
-                request=request,
+                actor=actor,
             )
 
         now = timezone.now()
@@ -354,10 +376,10 @@ class TaskCloseService:
         task.save(update_fields=update_fields)
 
         TaskCloseService._cancel_pending_notifications(task.id)
-        record_request_event(
+        record_task_event(
             task,
             TaskEventType.CLOSED,
-            request,
+            actor=actor,
             payload={"from_column_id": from_column_id},
         )
         return task
@@ -370,9 +392,12 @@ class TaskCloseService:
             return
 
         notification_job = django_apps.get_model("notifications", "NotificationJob")
-        notification_job.objects.filter(task_id=task_id, status="pending").update(
-            status="cancelled",
-        )
+        from apps.notifications.models import NotificationStatus
+
+        notification_job.objects.filter(
+            task_id=task_id,
+            status=NotificationStatus.PENDING,
+        ).update(status=NotificationStatus.CANCELLED)
 
 
 class TaskReopenService:

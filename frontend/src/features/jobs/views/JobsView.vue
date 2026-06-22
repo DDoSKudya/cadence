@@ -303,6 +303,9 @@ function jobTypeLabel(value: string): string {
   const labels: Record<string, string> = {
     json_inbox_scan: "Скан inbox",
     json_import_file: "Импорт задач",
+    notification_scan: "Скан напоминаний",
+    telegram_send: "Telegram отправка",
+    telegram_callback: "Telegram callback",
   };
   return labels[value] || value;
 }
@@ -311,6 +314,9 @@ function jobTypeHint(value: string): string {
   const hints: Record<string, string> = {
     json_inbox_scan: "Celery · папка pending",
     json_import_file: "Upload · JSON-файл",
+    notification_scan: "Celery · stale/overdue",
+    telegram_send: "Celery · aiogram",
+    telegram_callback: "Bot · inline кнопки",
   };
   return hints[value] || value;
 }

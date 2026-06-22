@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   ArrowLeftStartOnRectangleIcon,
+  BellAlertIcon,
   Cog6ToothIcon,
   QueueListIcon,
   Squares2X2Icon,
@@ -65,6 +66,10 @@ async function logout() {
         <RouterLink active-class="nav-link-active" class="nav-link" to="/settings/columns">
           <Cog6ToothIcon class="icon-md" />
           Колонки
+        </RouterLink>
+        <RouterLink active-class="nav-link-active" class="nav-link" to="/settings/notifications">
+          <BellAlertIcon class="icon-md" />
+          Оповещение
         </RouterLink>
         <RouterLink active-class="nav-link-active" class="nav-link" to="/jobs">
           <QueueListIcon class="icon-md" />
