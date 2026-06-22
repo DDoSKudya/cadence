@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/outline";
 
 import { getCurrentWeekKey, weekLabel } from "@/lib/week";
@@ -9,6 +10,9 @@ const board = useBoardStore();
 
 const label = computed(() => weekLabel(board.weekKey));
 const isCurrentWeek = computed(() => board.weekKey === getCurrentWeekKey());
+const reviewLink = computed(() =>
+  board.weekId ? { name: "week-review", params: { id: board.weekId } } : null,
+);
 </script>
 
 <template>
@@ -32,6 +36,9 @@ const isCurrentWeek = computed(() => board.weekKey === getCurrentWeekKey());
         <ChevronRightIcon class="icon-sm" />
       </button>
     </div>
+    <RouterLink v-if="reviewLink" class="week-nav-review" :to="reviewLink">
+      Обзор
+    </RouterLink>
     <button
       class="week-nav-reset"
       type="button"

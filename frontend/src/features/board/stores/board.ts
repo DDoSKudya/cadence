@@ -8,6 +8,7 @@ import type { BoardColumn, BoardTask, Tag, TaskCreatePayload } from "../types";
 
 export const useBoardStore = defineStore("board", () => {
   const weekKey = ref(getCurrentWeekKey());
+  const weekId = ref<number | null>(null);
   const boardName = ref("");
   const columns = ref<BoardColumn[]>([]);
   const tags = ref<Tag[]>([]);
@@ -85,6 +86,7 @@ export const useBoardStore = defineStore("board", () => {
     try {
       const payload = await boardApi.fetchBoard(weekKey.value);
       boardName.value = payload.board.name;
+      weekId.value = payload.week.id;
       columns.value = payload.columns;
     } catch (loadError) {
       error.value = loadError instanceof Error ? loadError.message : "Не удалось загрузить доску";
@@ -161,6 +163,7 @@ export const useBoardStore = defineStore("board", () => {
 
   return {
     weekKey,
+    weekId,
     boardName,
     columns,
     tags,

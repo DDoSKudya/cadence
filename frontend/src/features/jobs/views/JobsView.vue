@@ -25,6 +25,7 @@ import {
   type JobFilters,
 } from "@/features/jobs/api";
 import { pluralRu } from "@/lib/plural";
+import { formatDateTime } from "@/lib/datetime";
 
 const POLL_INTERVAL_MS = 5000;
 const PAGE_SIZE = 20;
@@ -336,18 +337,6 @@ function statusLabel(status: string): string {
   return labels[status] || status;
 }
 
-function formatDate(value: string | null): string {
-  if (!value) {
-    return "—";
-  }
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
 function formatJson(value: Record<string, unknown> | null | undefined): string {
   if (!value || typeof value !== "object") {
     return "";
@@ -600,7 +589,7 @@ onUnmounted(() => {
                         </span>
                       </div>
                       <p class="jobs-list-meta">
-                        {{ formatDate(job.created_at) }}
+                        {{ formatDateTime(job.created_at) }}
                         <span v-if="job.attempts > 0"> · {{ job.attempts }}/{{ job.max_attempts }}</span>
                       </p>
                     </div>
@@ -675,21 +664,21 @@ onUnmounted(() => {
                     :class="`jobs-run-step-${runStepState(selectedJob, 'created')}`"
                   >
                     <span class="jobs-run-label">Создана</span>
-                    <span class="jobs-run-time">{{ formatDate(selectedJob.created_at) }}</span>
+                    <span class="jobs-run-time">{{ formatDateTime(selectedJob.created_at) }}</span>
                   </div>
                   <div
                     class="jobs-run-step"
                     :class="`jobs-run-step-${runStepState(selectedJob, 'started')}`"
                   >
                     <span class="jobs-run-label">Старт</span>
-                    <span class="jobs-run-time">{{ formatDate(selectedJob.started_at) }}</span>
+                    <span class="jobs-run-time">{{ formatDateTime(selectedJob.started_at) }}</span>
                   </div>
                   <div
                     class="jobs-run-step"
                     :class="`jobs-run-step-${runStepState(selectedJob, 'finished')}`"
                   >
                     <span class="jobs-run-label">Финиш</span>
-                    <span class="jobs-run-time">{{ formatDate(selectedJob.finished_at) }}</span>
+                    <span class="jobs-run-time">{{ formatDateTime(selectedJob.finished_at) }}</span>
                   </div>
                 </div>
 

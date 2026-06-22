@@ -26,6 +26,7 @@ import {
   type NotificationSettingsUpdate,
   type TelegramRecipient,
 } from "@/features/settings/project-api";
+import { formatDateTime } from "@/lib/datetime";
 import { pluralRu } from "@/lib/plural";
 
 const loading = ref(true);
@@ -127,7 +128,7 @@ const botHealth = computed(() => {
     parts.push(form.value.telegram_bot_check_message);
   }
   if (form.value.telegram_bot_checked_at) {
-    parts.push(`Проверка: ${formatCheckTime(form.value.telegram_bot_checked_at)}`);
+    parts.push(`Проверка: ${formatDateTime(form.value.telegram_bot_checked_at)}`);
   }
   const title = parts.join("\n");
 
@@ -139,19 +140,6 @@ const botHealth = computed(() => {
   }
   return { label: "Не проверен", class: "notify-bot-status-idle", title };
 });
-
-function formatCheckTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDuration(minutes: number): string {
   if (!Number.isFinite(minutes) || minutes <= 0) {
@@ -477,7 +465,7 @@ onMounted(loadSettings);
                     v-if="form.telegram_bot_checked_at && !telegramSetupIssues.length"
                     class="notify-bot-status-time"
                   >
-                    {{ formatCheckTime(form.telegram_bot_checked_at) }}
+                    {{ formatDateTime(form.telegram_bot_checked_at) }}
                   </span>
                 </span>
                 <label class="notify-switch" title="Включить канал" @click.stop>
