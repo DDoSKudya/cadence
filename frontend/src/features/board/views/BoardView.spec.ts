@@ -26,7 +26,7 @@ vi.mock("@/features/board/components/WeekSwitcher.vue", () => ({
 vi.mock("@/features/board/api", () => ({
   fetchBoard: vi.fn().mockResolvedValue({
     board: { id: 1, name: "Главная" },
-    week: { iso_year: 2026, iso_week: 6 },
+    week: { id: 3, iso_year: 2026, iso_week: 6 },
     columns: [],
   }),
   fetchTags: vi.fn().mockResolvedValue([]),

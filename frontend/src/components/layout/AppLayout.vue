@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import {
+  ArchiveBoxIcon,
   ArrowLeftStartOnRectangleIcon,
   BellAlertIcon,
   Cog6ToothIcon,
@@ -62,6 +63,10 @@ async function logout() {
         <RouterLink active-class="nav-link-active" class="nav-link" to="/board">
           <ViewColumnsIcon class="icon-md" />
           Доска
+        </RouterLink>
+        <RouterLink active-class="nav-link-active" class="nav-link" to="/archive">
+          <ArchiveBoxIcon class="icon-md" />
+          Архив
         </RouterLink>
         <RouterLink active-class="nav-link-active" class="nav-link" to="/settings/columns">
           <Cog6ToothIcon class="icon-md" />

@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "apps.boards.apps.BoardsConfig",
     "apps.weeks.apps.WeeksConfig",
     "apps.tasks.apps.TasksConfig",
+    "apps.archive.apps.ArchiveConfig",
     "apps.jobs.apps.JobsConfig",
     "apps.imports.apps.ImportsConfig",
     "apps.notifications.apps.NotificationsConfig",

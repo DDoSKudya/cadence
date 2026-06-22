@@ -23,7 +23,7 @@ describe("useBoardStore", () => {
   it("loads board data", async () => {
     vi.mocked(boardApi.fetchBoard).mockResolvedValue({
       board: { id: 1, name: "Главная" },
-      week: { iso_year: 2026, iso_week: 6 },
+      week: { id: 3, iso_year: 2026, iso_week: 6 },
       columns: [
         {
           id: 1,
@@ -48,7 +48,7 @@ describe("useBoardStore", () => {
   it("filters tasks by search query", async () => {
     vi.mocked(boardApi.fetchBoard).mockResolvedValue({
       board: { id: 1, name: "Главная" },
-      week: { iso_year: 2026, iso_week: 6 },
+      week: { id: 3, iso_year: 2026, iso_week: 6 },
       columns: [
         {
           id: 1,

@@ -164,7 +164,11 @@ class BoardResponseSerializer(serializers.Serializer):
 
     def get_week(self, payload: BoardPayload) -> dict[str, int]:
         week = payload["week"]
-        return {"iso_year": week.iso_year, "iso_week": week.iso_week}
+        return {
+            "id": week.id,
+            "iso_year": week.iso_year,
+            "iso_week": week.iso_week,
+        }
 
     def get_columns(self, payload: BoardPayload) -> list[dict[str, object]]:
         tasks_by_column = payload["tasks_by_column"]

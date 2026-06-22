@@ -3,6 +3,7 @@ import { CalendarDaysIcon, TagIcon } from "@heroicons/vue/24/outline";
 
 import type { BoardTask } from "@/features/board/types";
 import { priorityLabel } from "@/features/board/labels";
+import { formatDateTime } from "@/lib/datetime";
 
 defineProps<{
   task: BoardTask;
@@ -24,17 +25,6 @@ const priorityAccentClass: Record<string, string> = {
   low: "task-card-priority-low",
 };
 
-function formatDue(value: string | null): string {
-  if (!value) {
-    return "";
-  }
-  return new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 </script>
 
 <template>
@@ -56,7 +46,7 @@ function formatDue(value: string | null): string {
 
       <p v-if="task.due_at" class="task-meta-row mt-2.5">
         <CalendarDaysIcon class="icon-sm" />
-        {{ formatDue(task.due_at) }}
+        {{ formatDateTime(task.due_at) }}
       </p>
 
       <div v-if="task.tags.length" class="mt-2.5 flex flex-wrap gap-1.5">

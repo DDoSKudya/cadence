@@ -8,6 +8,7 @@ export interface Tag {
 }
 
 export interface WeekInfo {
+  id: number;
   iso_year: number;
   iso_week: number;
 }
