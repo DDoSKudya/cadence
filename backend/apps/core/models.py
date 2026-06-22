@@ -53,7 +53,17 @@ class ProjectSettings(models.Model):
     timezone = models.CharField(max_length=64, default=settings.TIME_ZONE)
     json_inbox_enabled = models.BooleanField(default=True)
     telegram_enabled = models.BooleanField(default=False)
+    telegram_bot_token = models.CharField(max_length=255, blank=True, default="")
+    telegram_bot_username = models.CharField(max_length=80, blank=True, default="")
+    telegram_recipients = models.JSONField(default=list, blank=True)
+    telegram_bot_check_ok = models.BooleanField(null=True, blank=True)
+    telegram_bot_check_message = models.CharField(
+        max_length=255, blank=True, default=""
+    )
+    telegram_bot_checked_at = models.DateTimeField(null=True, blank=True)
     default_reminder_interval_minutes = models.PositiveIntegerField(default=1440)
+    stale_in_progress_minutes = models.PositiveIntegerField(default=4320)
+    stale_planned_minutes = models.PositiveIntegerField(default=10080)
     quiet_hours_start = models.TimeField(null=True, blank=True)
     quiet_hours_end = models.TimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -73,6 +83,22 @@ class ProjectSettings(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.pk = 1
         super().save(*args, **kwargs)
+
+    def telegram_recipient_chat_ids(self) -> list[str]:
+        recipients = self.telegram_recipients or []
+        chat_ids: list[str] = []
+        for item in recipients:
+            if not isinstance(item, dict):
+                continue
+            chat_id = str(item.get("chat_id", "")).strip()
+            if chat_id:
+                chat_ids.append(chat_id)
+        return chat_ids
+
+    def resolve_telegram_bot_token(self) -> str:
+        if self.telegram_bot_token:
+            return self.telegram_bot_token
+        return settings.TELEGRAM_BOT_TOKEN
 
 
 class Tag(models.Model):

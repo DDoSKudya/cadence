@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     "apps.tasks.apps.TasksConfig",
     "apps.jobs.apps.JobsConfig",
     "apps.imports.apps.ImportsConfig",
+    "apps.notifications.apps.NotificationsConfig",
+    "apps.telegram_bot.apps.TelegramBotConfig",
 ]
 
 MIDDLEWARE = [
@@ -111,11 +113,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.imports.tasks.scan_json_inbox",
         "schedule": crontab(minute="*/1"),
     },
+    "scan-reminders": {
+        "task": "apps.notifications.tasks.scan_reminders",
+        "schedule": crontab(minute="*/5"),
+    },
 }
 
 TELEGRAM_ENABLED = env("TELEGRAM_ENABLED")
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN")
-TELEGRAM_DEFAULT_CHAT_ID = env("TELEGRAM_DEFAULT_CHAT_ID")
 
 TASK_INBOX_PENDING_DIR = env("TASK_INBOX_PENDING_DIR")
 TASK_INBOX_PROCESSING_DIR = env("TASK_INBOX_PROCESSING_DIR")

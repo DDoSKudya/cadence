@@ -17,7 +17,6 @@ env = environ.Env(
     CELERY_BROKER_URL=(str, "amqp://cadence:cadence@localhost:5672//"),
     TELEGRAM_ENABLED=(bool, False),
     TELEGRAM_BOT_TOKEN=(str, ""),
-    TELEGRAM_DEFAULT_CHAT_ID=(str, ""),
     TASK_INBOX_PENDING_DIR=(str, f"{_INBOX_ROOT_DEFAULT}/pending"),
     TASK_INBOX_PROCESSING_DIR=(str, f"{_INBOX_ROOT_DEFAULT}/processing"),
     TASK_INBOX_PROCESSED_DIR=(str, f"{_INBOX_ROOT_DEFAULT}/processed"),

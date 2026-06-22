@@ -1,11 +1,17 @@
 from collections import defaultdict
 
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from apps.boards.models import Board
 from apps.boards.services import ColumnSettingsService
 from apps.tasks.models import Task
 from apps.weeks.models import Week
+
+
+def get_board_task(pk: int) -> Task:
+    board = ColumnSettingsService.get_default_board()
+    return get_object_or_404(Task, pk=pk, board=board)
 
 
 def active_tasks_for_board(board: Board, week: Week):
