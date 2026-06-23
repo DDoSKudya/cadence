@@ -7,8 +7,8 @@ const board = useBoardStore();
 </script>
 
 <template>
-  <button class="btn-primary px-3 py-2 text-sm" type="button" @click="board.openCreateTask()">
+  <button class="btn-primary board-action-btn" type="button" @click="board.openCreateTask()">
     <PlusIcon class="icon-sm" />
-    Задача
+    {{ $t("board.createTaskButton") }}
   </button>
 </template>

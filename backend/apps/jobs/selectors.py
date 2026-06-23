@@ -41,9 +41,7 @@ def parse_datetime_param(value: str | None) -> datetime | None:
     parsed = parse_datetime(value)
     if parsed is None:
         return None
-    if timezone.is_naive(parsed):
-        return timezone.make_aware(parsed)
-    return parsed
+    return timezone.make_aware(parsed) if timezone.is_naive(parsed) else parsed
 
 
 def parse_int_param(

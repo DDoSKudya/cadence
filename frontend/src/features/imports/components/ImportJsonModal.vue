@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   ArrowUpTrayIcon,
   ExclamationCircleIcon,
@@ -14,6 +15,7 @@ import {
 } from "@/features/imports/parse-import";
 
 const open = defineModel<boolean>("open", { default: false });
+const { t } = useI18n();
 
 const emit = defineEmits<{
   imported: [];
@@ -72,7 +74,7 @@ async function handleFiles(fileList: FileList | File[] | null | undefined) {
   const files = Array.from(fileList ?? []).filter(isJsonFile);
   if (files.length === 0) {
     if ((fileList?.length ?? 0) > 0) {
-      error.value = "Можно загружать только JSON-файлы";
+      error.value = t("imports.jsonOnly");
     }
     return;
   }
@@ -134,11 +136,11 @@ async function confirmImport() {
       if (result.status === "skipped_duplicate") {
         continue;
       } else {
-        failedMessages.push(`${preview.file.name}: ${result.error_message || "ошибка импорта"}`);
+        failedMessages.push(`${preview.file.name}: ${result.error_message || t("imports.importError")}`);
       }
     } catch (uploadError) {
       const message =
-        uploadError instanceof Error ? uploadError.message : "ошибка импорта";
+        uploadError instanceof Error ? uploadError.message : t("imports.importError");
       failedMessages.push(`${preview.file.name}: ${message}`);
     }
   }
@@ -192,11 +194,11 @@ onUnmounted(() => {
           aria-modal="true"
         >
           <header class="modal-header">
-            <h2 id="import-json-title" class="modal-title">Импорт задач</h2>
+            <h2 id="import-json-title" class="modal-title">{{ $t("imports.title") }}</h2>
             <button
               class="icon-btn"
               type="button"
-              aria-label="Закрыть"
+              :aria-label="$t('common.close')"
               :disabled="busy"
               @click="close"
             >
@@ -235,17 +237,17 @@ onUnmounted(() => {
               <span class="imports-dropzone-title">
                 {{
                   parsing
-                    ? "Разбираем файлы..."
+                    ? $t("imports.parsing")
                     : importing
-                      ? "Импортируем..."
-                      : "Перетащите JSON-файлы сюда"
+                      ? $t("imports.importing")
+                      : $t("imports.dropTitle")
                 }}
               </span>
               <span class="imports-dropzone-text">
                 {{
                   hasPreview
-                    ? "Можно добавить ещё файлы"
-                    : "или нажмите, чтобы выбрать один или несколько файлов"
+                    ? $t("imports.addMore")
+                    : $t("imports.dropText")
                 }}
               </span>
             </button>
@@ -255,8 +257,14 @@ onUnmounted(() => {
             <section v-if="hasPreview" class="imports-preview">
               <div class="imports-preview-summary">
                 <p>
-                  Файлов: {{ previews.length }}, готово к импорту: {{ validPreviews.length }},
-                  с ошибкой: {{ invalidPreviews.length }}, задач: {{ totalTasks }}
+                  {{
+                    $t("imports.summary", {
+                      files: previews.length,
+                      ready: validPreviews.length,
+                      failed: invalidPreviews.length,
+                      tasks: totalTasks,
+                    })
+                  }}
                 </p>
               </div>
 
@@ -270,8 +278,8 @@ onUnmounted(() => {
                   <div>
                     <h3 class="imports-file-card-title">{{ item.file.name }}</h3>
                     <p v-if="item.status === 'valid'" class="imports-file-card-meta">
-                      Ключ пакета: {{ item.idempotencyKey }}
-                      <span v-if="item.week"> · Неделя {{ item.week }}</span>
+                      {{ $t("imports.idempotencyKey", { key: item.idempotencyKey }) }}
+                      <span v-if="item.week"> · {{ $t("imports.week", { week: item.week }) }}</span>
                     </p>
                   </div>
                   <div class="imports-file-card-actions">
@@ -283,12 +291,12 @@ onUnmounted(() => {
                           : 'imports-file-badge-invalid'
                       "
                     >
-                      {{ item.status === "valid" ? "Готов" : "Ошибка" }}
+                      {{ item.status === "valid" ? $t("imports.ready") : $t("imports.error") }}
                     </span>
                     <button
                       class="imports-file-remove"
                       type="button"
-                      aria-label="Убрать файл"
+                      :aria-label="$t('imports.removeFile')"
                       :disabled="busy"
                       @click="removePreview(item.id)"
                     >
@@ -306,10 +314,10 @@ onUnmounted(() => {
                   <table class="imports-table">
                     <thead>
                       <tr>
-                        <th>Задача</th>
-                        <th>Колонка</th>
-                        <th>Приоритет</th>
-                        <th>Теги</th>
+                        <th>{{ $t("imports.task") }}</th>
+                        <th>{{ $t("imports.column") }}</th>
+                        <th>{{ $t("imports.priority") }}</th>
+                        <th>{{ $t("imports.tags") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -333,7 +341,7 @@ onUnmounted(() => {
               :disabled="busy"
               @click="cancelPreview"
             >
-              Очистить
+              {{ $t("imports.clear") }}
             </button>
             <button
               class="btn-primary px-4 py-2 text-sm disabled:opacity-60"
@@ -341,7 +349,7 @@ onUnmounted(() => {
               :disabled="busy || validPreviews.length === 0"
               @click="confirmImport"
             >
-              Импортировать {{ totalTasks }} задач
+              {{ $t("imports.importTasks", totalTasks) }}
             </button>
           </footer>
         </section>

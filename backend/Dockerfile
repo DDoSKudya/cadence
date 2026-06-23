@@ -1,3 +1,6 @@
+# Build context must be ./backend (see docker-compose.yml).
+# Do not use the repository root as context for this image.
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1

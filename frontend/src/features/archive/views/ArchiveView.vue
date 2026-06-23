@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   ArchiveBoxIcon,
   ArrowTopRightOnSquareIcon,
@@ -32,11 +33,13 @@ import { fetchTags } from "@/features/board/api";
 import type { Tag } from "@/features/board/types";
 import { priorityLabel } from "@/features/board/labels";
 import { formatDateTime, formatDateTimeLong } from "@/lib/datetime";
-import { pluralRu } from "@/lib/plural";
 import { formatWeekKey } from "@/lib/week";
+import { useToastStore } from "@/stores/toast";
 
 const PAGE_SIZE = 20;
 const POLL_INTERVAL_MS = 5000;
+const { t } = useI18n();
+const toast = useToastStore();
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 const listKey = ref(0);
@@ -53,13 +56,14 @@ const detailLoading = ref(false);
 const acting = ref(false);
 const filtersOpen = ref(false);
 const error = ref("");
-const notice = ref("");
 
 const filters = ref<ArchiveFilters>({
   search: "",
   week: "",
   tag: "",
   source: "",
+  closed_from: "",
+  closed_to: "",
 });
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / PAGE_SIZE)));
@@ -69,25 +73,27 @@ const filtersActive = computed(
     Boolean(filters.value.search?.trim()) ||
     Boolean(filters.value.week?.trim()) ||
     Boolean(filters.value.tag) ||
-    Boolean(filters.value.source),
+    Boolean(filters.value.source) ||
+    Boolean(filters.value.closed_from) ||
+    Boolean(filters.value.closed_to),
 );
 
 const headerMeta = computed(() => {
   if (loading.value) {
-    return "загрузка…";
+    return t("archive.loadingMeta");
   }
   const parts: string[] = [];
   if (totalCount.value === 0) {
-    parts.push("нет закрытых задач");
+    parts.push(t("archive.noClosedTasks"));
   } else {
-    parts.push(pluralRu(totalCount.value, "задача", "задачи", "задач"));
+    parts.push(t("archive.meta", totalCount.value));
   }
-  parts.push("обновляется автоматически");
+  parts.push(t("archive.autoRefresh"));
   return parts.join(" · ");
 });
 
 const sourceOptions = [
-  { value: "", label: "Все источники" },
+  { value: "", label: "common.all" },
   { value: "ui", label: "UI" },
   { value: "api", label: "API" },
   { value: "json_import", label: "JSON import" },
@@ -121,7 +127,7 @@ async function loadList(options: { initial?: boolean; pageChange?: boolean } = {
   } catch (loadError) {
     if (options.initial || options.pageChange) {
       error.value =
-        loadError instanceof Error ? loadError.message : "Не удалось загрузить архив";
+        loadError instanceof Error ? loadError.message : t("archive.loadFailed");
       tasks.value = [];
       totalCount.value = 0;
       selectedId.value = null;
@@ -148,7 +154,7 @@ async function loadDetail(taskId: number, options: { initial?: boolean } = {}) {
     if (options.initial) {
       selectedTask.value = null;
       error.value =
-        loadError instanceof Error ? loadError.message : "Не удалось загрузить задачу";
+        loadError instanceof Error ? loadError.message : t("board.loadFailed");
     }
   } finally {
     if (options.initial) {
@@ -179,7 +185,14 @@ async function applyFilters() {
 }
 
 function clearFilters() {
-  filters.value = { search: "", week: "", tag: "", source: "" };
+  filters.value = {
+    search: "",
+    week: "",
+    tag: "",
+    source: "",
+    closed_from: "",
+    closed_to: "",
+  };
   void applyFilters();
 }
 
@@ -197,16 +210,15 @@ async function reopenSelected() {
   }
   acting.value = true;
   error.value = "";
-  notice.value = "";
   try {
     await reopenArchiveTask(selectedTask.value.id);
-    notice.value = "Задача возвращена на доску";
+    toast.success(t("archive.taskRestored"));
     selectedId.value = null;
     selectedTask.value = null;
     await refreshArchive({ initial: true });
   } catch (reopenError) {
     error.value =
-      reopenError instanceof Error ? reopenError.message : "Не удалось вернуть задачу";
+      reopenError instanceof Error ? reopenError.message : t("errors.reopenTask");
   } finally {
     acting.value = false;
   }
@@ -218,14 +230,6 @@ watch(selectedId, (taskId) => {
     return;
   }
   selectedTask.value = null;
-});
-
-watch(notice, (value) => {
-  if (value) {
-    window.setTimeout(() => {
-      notice.value = "";
-    }, 2500);
-  }
 });
 
 onMounted(async () => {
@@ -258,7 +262,7 @@ onUnmounted(() => {
             <ArchiveBoxIcon />
           </span>
           <div>
-            <h1 class="archive-toolbar-title">Архив</h1>
+            <h1 class="archive-toolbar-title">{{ $t("archive.title") }}</h1>
             <p class="archive-toolbar-meta">{{ headerMeta }}</p>
           </div>
         </div>
@@ -266,14 +270,13 @@ onUnmounted(() => {
 
       <Transition name="archive-alert-slide">
         <p v-if="error" key="error" class="alert-error archive-alert">{{ error }}</p>
-        <p v-else-if="notice" key="notice" class="alert-notice archive-alert">{{ notice }}</p>
       </Transition>
 
       <div class="archive-body">
         <Transition mode="out-in" name="archive-body-swap">
           <div v-if="loading" key="loading" class="archive-detail-state">
             <span class="loading-spinner" />
-            <p>Загрузка архива…</p>
+            <p>{{ $t("archive.loadingArchive") }}</p>
           </div>
 
           <div v-else key="content" class="archive-layout">
@@ -285,7 +288,7 @@ onUnmounted(() => {
                     v-model="filters.search"
                     class="archive-search-input"
                     type="search"
-                    placeholder="Поиск по названию…"
+                    :placeholder="$t('archive.searchByTitle')"
                     @keydown.enter.prevent="applyFilters"
                   />
                 </label>
@@ -293,7 +296,7 @@ onUnmounted(() => {
                   class="archive-filter-toggle"
                   :class="{ 'archive-filter-toggle-active': filtersOpen || filtersActive }"
                   type="button"
-                  title="Фильтры"
+                  :title="$t('common.filters')"
                   @click="filtersOpen = !filtersOpen"
                 >
                   <FunnelIcon class="icon-sm" />
@@ -308,33 +311,43 @@ onUnmounted(() => {
                   @submit.prevent="applyFilters"
                 >
                   <label class="archive-filter-field">
-                    <span>Неделя</span>
-                    <input v-model="filters.week" class="field px-3 py-2" type="text" placeholder="2026-W25" />
+                    <span>{{ $t("common.week") }}</span>
+                    <input v-model="filters.week" class="field px-3 py-2" type="text" :placeholder="$t('analytics.weekPlaceholder')" />
                   </label>
                   <label class="archive-filter-field">
-                    <span>Тег</span>
+                    <span>{{ $t("common.tag") }}</span>
                     <select v-model="filters.tag" class="field px-3 py-2">
-                      <option value="">Все</option>
+                      <option value="">{{ $t("common.all") }}</option>
                       <option v-for="tag in tags" :key="tag.id" :value="tag.slug">{{ tag.name }}</option>
                     </select>
                   </label>
                   <label class="archive-filter-field">
-                    <span>Источник</span>
+                    <span>{{ $t("common.source") }}</span>
                     <select v-model="filters.source" class="field px-3 py-2">
                       <option
                         v-for="option in sourceOptions"
                         :key="option.value || 'all'"
                         :value="option.value"
                       >
-                        {{ option.label }}
+                        {{ option.value ? option.label : $t(option.label) }}
                       </option>
                     </select>
                   </label>
+                  <div class="archive-filter-dates">
+                    <label class="archive-filter-field">
+                      <span>{{ $t("archive.closedFrom") }}</span>
+                      <input v-model="filters.closed_from" class="field px-3 py-2" type="date" />
+                    </label>
+                    <label class="archive-filter-field">
+                      <span>{{ $t("archive.closedTo") }}</span>
+                      <input v-model="filters.closed_to" class="field px-3 py-2" type="date" />
+                    </label>
+                  </div>
                   <div class="archive-filter-actions">
                     <button class="archive-btn archive-btn-ghost" type="button" @click="clearFilters">
-                      Сбросить
+                      {{ $t("common.reset") }}
                     </button>
-                    <button class="archive-btn archive-btn-primary" type="submit">Применить</button>
+                    <button class="archive-btn archive-btn-primary" type="submit">{{ $t("common.apply") }}</button>
                   </div>
                 </form>
               </Transition>
@@ -375,7 +388,7 @@ onUnmounted(() => {
 
                   <div v-else key="empty" class="archive-empty">
                     <ArchiveBoxIcon class="archive-empty-icon" />
-                    <p>{{ filtersActive ? "Нет задач по фильтру" : "Архив пуст" }}</p>
+                    <p>{{ filtersActive ? $t("archive.emptyFiltered") : $t("archive.empty") }}</p>
                   </div>
                 </Transition>
 
@@ -409,7 +422,7 @@ onUnmounted(() => {
               <Transition mode="out-in" name="archive-detail-swap">
                 <div v-if="detailLoading" key="loading" class="archive-detail-state">
                   <span class="loading-spinner" />
-                  <p>Загрузка карточки…</p>
+                  <p>{{ $t("archive.loadingTask") }}</p>
                 </div>
 
                 <div v-else-if="selectedTask" :key="selectedTask.id" class="archive-detail-panel">
@@ -417,7 +430,7 @@ onUnmounted(() => {
                     <div class="archive-hero-main">
                       <p class="archive-hero-eyebrow">
                         <CheckBadgeIcon class="archive-inline-icon" />
-                        Закрыта {{ formatDateTimeLong(selectedTask.closed_at) }}
+                        {{ $t("archive.closedAt", { value: formatDateTimeLong(selectedTask.closed_at) }) }}
                       </p>
                       <h2 class="archive-hero-title">{{ selectedTask.title }}</h2>
                       <div class="archive-chip-row">
@@ -438,7 +451,7 @@ onUnmounted(() => {
                       @click="reopenSelected"
                     >
                       <ArrowUturnLeftIcon class="icon-sm" />
-                      {{ acting ? "Возврат…" : "Вернуть на доску" }}
+                      {{ acting ? $t("archive.restoring") : $t("archive.restoreToBoard") }}
                     </button>
                   </div>
 
@@ -449,7 +462,7 @@ onUnmounted(() => {
                         key="description"
                         class="archive-info-card archive-detail-block"
                       >
-                        <p class="archive-info-label">Описание</p>
+                        <p class="archive-info-label">{{ $t("common.description") }}</p>
                         <p class="archive-info-text">{{ selectedTask.description }}</p>
                       </div>
 
@@ -459,7 +472,7 @@ onUnmounted(() => {
                         class="archive-info-grid archive-detail-block"
                       >
                         <div v-if="selectedTask.completion_note" class="archive-info-card">
-                          <p class="archive-info-label">Итог</p>
+                          <p class="archive-info-label">{{ $t("archive.outcome") }}</p>
                           <p class="archive-info-text">{{ selectedTask.completion_note }}</p>
                         </div>
 
@@ -487,7 +500,7 @@ onUnmounted(() => {
                       >
                         <p class="archive-info-label">
                           <TagIcon class="archive-inline-icon" />
-                          Теги
+                          {{ $t("common.tags") }}
                         </p>
                         <div class="archive-tag-row">
                           <span
@@ -503,7 +516,7 @@ onUnmounted(() => {
 
                       <div key="history" class="archive-history-card archive-detail-block">
                         <div class="archive-history-head">
-                          <p class="archive-info-label">История действий</p>
+                          <p class="archive-info-label">{{ $t("archive.events") }}</p>
                           <span class="archive-history-count">
                             {{ selectedTask.events.length }}
                           </span>
@@ -518,9 +531,9 @@ onUnmounted(() => {
                             </colgroup>
                             <thead>
                               <tr>
-                                <th class="archive-history-th-event">Событие</th>
-                                <th class="archive-history-th-source">Источник</th>
-                                <th class="archive-history-th-time">Время</th>
+                                <th class="archive-history-th-event">{{ $t("archive.event") }}</th>
+                                <th class="archive-history-th-source">{{ $t("common.source") }}</th>
+                                <th class="archive-history-th-time">{{ $t("archive.time") }}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -543,7 +556,7 @@ onUnmounted(() => {
                             </tbody>
                           </table>
                         </div>
-                        <p v-else class="archive-history-empty">Событий пока нет</p>
+                        <p v-else class="archive-history-empty">{{ $t("archive.noEvents") }}</p>
                       </div>
                     </TransitionGroup>
                   </div>
@@ -551,8 +564,8 @@ onUnmounted(() => {
 
                 <div v-else key="placeholder" class="archive-detail-state archive-detail-placeholder">
                   <MagnifyingGlassIcon class="archive-empty-icon" />
-                  <p>Выберите задачу слева</p>
-                  <span class="archive-detail-placeholder-hint">или воспользуйтесь поиском и фильтрами</span>
+                  <p>{{ $t("archive.selectTask") }}</p>
+                  <span class="archive-detail-placeholder-hint">{{ $t("archive.selectTaskHint") }}</span>
                 </div>
               </Transition>
             </section>

@@ -1,18 +1,27 @@
+import { t } from "@/i18n";
+
 export interface ColumnColorOption {
   value: string;
   label: string;
 }
 
-export const COLUMN_COLOR_OPTIONS: ColumnColorOption[] = [
-  { value: "slate", label: "Серый" },
-  { value: "blue", label: "Синий" },
-  { value: "indigo", label: "Indigo" },
-  { value: "teal", label: "Бирюза" },
-  { value: "green", label: "Зелёный" },
-  { value: "amber", label: "Янтарный" },
-  { value: "orange", label: "Оранжевый" },
-  { value: "red", label: "Красный" },
+const COLUMN_COLOR_VALUES = [
+  "slate",
+  "blue",
+  "indigo",
+  "teal",
+  "green",
+  "amber",
+  "orange",
+  "red",
 ];
+
+export function columnColorOptions(): ColumnColorOption[] {
+  return COLUMN_COLOR_VALUES.map((value) => ({
+    value,
+    label: t(`colors.${value}`),
+  }));
+}
 
 const PRESET_HEX: Record<string, string> = {
   slate: "#64748b",

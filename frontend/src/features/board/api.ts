@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -19,17 +20,17 @@ async function parseJson<T>(response: Response, fallback: string): Promise<T> {
 
 export async function fetchBoard(weekKey: string): Promise<BoardResponse> {
   const response = await apiFetch(`/api/v1/board/?week=${encodeURIComponent(weekKey)}`);
-  return parseJson(response, "Не удалось загрузить доску");
+  return parseJson(response, t("board.loadBoardFailed"));
 }
 
 export async function fetchTask(taskId: number): Promise<TaskDetail> {
   const response = await apiFetch(`/api/v1/tasks/${taskId}/`);
-  return parseJson(response, "Не удалось загрузить задачу");
+  return parseJson(response, t("board.loadFailed"));
 }
 
 export async function fetchTags(): Promise<Tag[]> {
   const response = await apiFetch("/api/v1/tags/");
-  return parseJson(response, "Не удалось загрузить теги");
+  return parseJson(response, t("errors.loadTags"));
 }
 
 export async function createTask(payload: TaskCreatePayload): Promise<BoardTask> {
@@ -37,7 +38,7 @@ export async function createTask(payload: TaskCreatePayload): Promise<BoardTask>
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "Не удалось создать задачу");
+  return parseJson(response, t("board.createFailed"));
 }
 
 export async function updateTask(taskId: number, payload: TaskUpdatePayload) {
@@ -45,7 +46,7 @@ export async function updateTask(taskId: number, payload: TaskUpdatePayload) {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  return parseJson<TaskDetail>(response, "Не удалось сохранить задачу");
+  return parseJson<TaskDetail>(response, t("board.saveFailed"));
 }
 
 export async function moveTask(
@@ -60,7 +61,7 @@ export async function moveTask(
       target_position: targetPosition,
     }),
   });
-  return parseJson<BoardTask>(response, "Не удалось переместить задачу");
+  return parseJson<BoardTask>(response, t("board.moveFailed"));
 }
 
 export async function closeTask(taskId: number, completionNote = "", evidenceUrl?: string) {
@@ -71,5 +72,5 @@ export async function closeTask(taskId: number, completionNote = "", evidenceUrl
       evidence_url: evidenceUrl ?? null,
     }),
   });
-  return parseJson<TaskDetail>(response, "Не удалось закрыть задачу");
+  return parseJson<TaskDetail>(response, t("board.closeFailed"));
 }

@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 import type { WeekCloseResult, WeekReviewResponse } from "./types";
@@ -12,7 +13,7 @@ async function parseJson<T>(response: Response, fallback: string): Promise<T> {
 
 export async function fetchWeekReview(weekId: number): Promise<WeekReviewResponse> {
   const response = await apiFetch(`/api/v1/weeks/${weekId}/review/`);
-  return parseJson(response, "Не удалось загрузить обзор недели");
+  return parseJson(response, t("weekReview.loadFailed"));
 }
 
 export async function saveWeekReviewNotes(
@@ -23,7 +24,7 @@ export async function saveWeekReviewNotes(
     method: "PATCH",
     body: JSON.stringify({ review_notes: reviewNotes }),
   });
-  return parseJson(response, "Не удалось сохранить заметки");
+  return parseJson(response, t("weekReview.saveFailed"));
 }
 
 export async function closeWeek(
@@ -34,5 +35,5 @@ export async function closeWeek(
     method: "POST",
     body: JSON.stringify({ carry_over: carryOver }),
   });
-  return parseJson(response, "Не удалось закрыть неделю");
+  return parseJson(response, t("weekReview.closeFailed"));
 }

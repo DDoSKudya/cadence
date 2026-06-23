@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import draggable from "vuedraggable";
 import {
   Bars3Icon,
@@ -14,8 +15,8 @@ import {
   columnDotStyle,
   columnPreviewLaneStyle,
 } from "@/lib/column-color";
-import { pluralRu } from "@/lib/plural";
 
+const { t } = useI18n();
 const columns = ref<SettingsColumn[]>([]);
 const displayColumns = ref<SettingsColumn[]>([]);
 const loading = ref(true);
@@ -27,9 +28,7 @@ const panelShow = ref(false);
 const panelMode = ref<"create" | "edit">("create");
 const panelColumn = ref<SettingsColumn | null>(null);
 
-const metaLine = computed(() =>
-  pluralRu(displayColumns.value.length, "колонка", "колонки", "колонок"),
-);
+const metaLine = computed(() => t("settings.columnsMeta", displayColumns.value.length));
 
 const selectedColumnId = computed(() =>
   panelShow.value && panelMode.value === "edit" ? panelColumn.value?.id : null,
@@ -49,7 +48,7 @@ async function loadColumns() {
     syncDisplayColumns();
   } catch (loadError) {
     error.value =
-      loadError instanceof Error ? loadError.message : "Не удалось загрузить колонки";
+      loadError instanceof Error ? loadError.message : t("errors.loadColumns");
   } finally {
     loading.value = false;
   }
@@ -76,7 +75,7 @@ async function persistOrder() {
     syncDisplayColumns();
   } catch (reorderError) {
     error.value =
-      reorderError instanceof Error ? reorderError.message : "Не удалось изменить порядок";
+      reorderError instanceof Error ? reorderError.message : t("errors.reorderColumns");
     syncDisplayColumns();
   } finally {
     reordering.value = false;
@@ -133,7 +132,7 @@ function wipLabel(column: SettingsColumn): string | null {
   if (column.wip_limit === null) {
     return null;
   }
-  return `Лимит ${column.wip_limit}`;
+  return t("board.wipLimit", { count: column.wip_limit });
 }
 
 onMounted(loadColumns);
@@ -144,8 +143,8 @@ onMounted(loadColumns);
     <div class="board-shell settings-board-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
-          <h1 class="page-title">Колонки</h1>
-          <p class="page-meta">{{ metaLine }} · порядок и оформление</p>
+          <h1 class="page-title">{{ $t("settings.columnsTitle") }}</h1>
+          <p class="page-meta">{{ metaLine }} · {{ $t("settings.columnsMetaSuffix") }}</p>
         </div>
       </header>
 
@@ -156,12 +155,12 @@ onMounted(loadColumns);
       <div v-if="loading" class="settings-body settings-body-center">
         <div class="loading-state">
           <span class="loading-spinner" aria-hidden="true" />
-          <p class="text-sm text-[var(--color-text-secondary)]">Загрузка колонок...</p>
+          <p class="text-sm text-[var(--color-text-secondary)]">{{ $t("common.loading") }}</p>
         </div>
       </div>
 
       <div v-else class="settings-body settings-body-split">
-        <section class="columns-preview" aria-label="Порядок колонок на доске">
+        <section class="columns-preview" :aria-label="$t('settings.columnsPreviewAria')">
           <div
             v-for="(column, index) in displayColumns"
             :key="column.id"
@@ -185,7 +184,7 @@ onMounted(loadColumns);
         <div class="settings-split">
           <aside class="columns-sidebar">
             <div class="columns-sidebar-head">
-              <p class="columns-sidebar-label">Список</p>
+              <p class="columns-sidebar-label">{{ $t("settings.columnsList") }}</p>
             </div>
 
             <draggable
@@ -211,8 +210,8 @@ onMounted(loadColumns);
                   <button
                     class="columns-drag-handle icon-btn columns-action-btn"
                     type="button"
-                    title="Перетащите"
-                    aria-label="Перетащите колонку"
+                    :title="$t('settings.dragColumn')"
+                    :aria-label="$t('settings.dragColumn')"
                     @click.stop
                   >
                     <Bars3Icon class="icon-sm" />
@@ -226,7 +225,7 @@ onMounted(loadColumns);
                   <div class="columns-list-main">
                     <span class="columns-list-name">{{ column.name }}</span>
                     <span class="columns-list-meta">
-                      {{ wipLabel(column) || `Позиция ${index + 1}` }}
+                      {{ wipLabel(column) || $t("settings.position", { position: index + 1 }) }}
                     </span>
                   </div>
                 </article>
@@ -249,14 +248,13 @@ onMounted(loadColumns);
                 <div class="columns-empty-icon">
                   <ViewColumnsIcon class="size-8" />
                 </div>
-                <h2 class="columns-empty-title">Настройка колонок</h2>
+                <h2 class="columns-empty-title">{{ $t("settings.columnsEmptyTitle") }}</h2>
                 <p class="columns-empty-text">
-                  Выберите колонку в списке или на превью доски, чтобы изменить название,
-                  цвет и лимит WIP.
+                  {{ $t("settings.columnsEmptyText") }}
                 </p>
                 <button class="btn-primary px-4 py-2 text-sm" type="button" @click="openCreate">
                   <PlusIcon class="icon-sm" />
-                  Новая колонка
+                  {{ $t("settings.newColumn") }}
                 </button>
               </div>
             </Transition>

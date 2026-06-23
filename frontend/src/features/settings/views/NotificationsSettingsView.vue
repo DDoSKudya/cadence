@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   ArrowPathIcon,
   BellAlertIcon,
@@ -11,6 +12,7 @@ import {
   TrashIcon,
   UserGroupIcon,
   UserIcon,
+  XMarkIcon,
 } from "@heroicons/vue/24/outline";
 
 import {
@@ -27,24 +29,28 @@ import {
   type TelegramRecipient,
 } from "@/features/settings/project-api";
 import { formatDateTime } from "@/lib/datetime";
-import { pluralRu } from "@/lib/plural";
+import { useToastStore } from "@/stores/toast";
 
+const { t } = useI18n();
+const toast = useToastStore();
 const loading = ref(true);
 const loadFailed = ref(false);
 const saving = ref(false);
 const botChecking = ref(false);
 const error = ref("");
-const notice = ref("");
 const form = ref<NotificationSettingsForm | null>(null);
 const savedForm = ref<NotificationSettingsForm | null>(null);
 const botTokenInput = ref("");
 const openTelegram = ref(false);
+const recipientPanelOpen = ref(false);
 
-const draftRecipient = ref<TelegramRecipient>({
+const emptyDraftRecipient = (): TelegramRecipient => ({
   chat_id: "",
   label: "",
   kind: "user",
 });
+
+const draftRecipient = ref<TelegramRecipient>(emptyDraftRecipient());
 
 const isDirty = computed(() => {
   if (!form.value || !savedForm.value) {
@@ -58,12 +64,12 @@ const isDirty = computed(() => {
 
 const headerMeta = computed(() => {
   if (!form.value) {
-    return "Правила и каналы доставки";
+    return t("settings.notificationRules");
   }
   const quiet =
     form.value.quiet_hours_start && form.value.quiet_hours_end
-      ? `тихие часы ${form.value.quiet_hours_start}–${form.value.quiet_hours_end}`
-      : "без тихих часов";
+      ? `${t("settings.quietHours").toLowerCase()} ${form.value.quiet_hours_start}–${form.value.quiet_hours_end}`
+      : t("settings.quietHint");
   return `${formatDuration(form.value.default_reminder_interval_minutes)} · ${quiet}`;
 });
 
@@ -71,15 +77,14 @@ const telegramSummary = computed(() => {
   if (!form.value) {
     return "";
   }
-  const status = form.value.telegram_enabled ? "вкл." : "выкл.";
-  const bot = form.value.telegram_bot_username.trim() || (form.value.telegram_bot_token_set ? "бот ok" : "бот не задан");
-  const count = pluralRu(
-    form.value.telegram_recipients.length,
-    "получатель",
-    "получателя",
-    "получателей",
-  );
-  return `${status} · ${bot} · ${count}`;
+  const status = form.value.telegram_enabled ? t("settings.enabledShort") : t("settings.disabledShort");
+  const bot = form.value.telegram_bot_username.trim() || (form.value.telegram_bot_token_set ? t("settings.botOk") : t("common.notConfigured"));
+  const count = t("settings.recipientCount", form.value.telegram_recipients.length);
+  return t("settings.summary", {
+    status,
+    bot,
+    count,
+  });
 });
 
 const hasBotToken = computed(() => {
@@ -95,10 +100,10 @@ const telegramSetupIssues = computed(() => {
   }
   const issues: string[] = [];
   if (!hasBotToken.value) {
-    issues.push("не указан токен бота");
+    issues.push(t("settings.setupNoToken"));
   }
   if (form.value.telegram_recipients.length === 0) {
-    issues.push("нет получателей");
+    issues.push(t("settings.setupNoRecipients"));
   }
   return issues;
 });
@@ -112,12 +117,12 @@ const botHealth = computed(() => {
   }
 
   if (botChecking.value) {
-    return { label: "Проверка…", class: "notify-bot-status-pending", title: "" };
+    return { label: t("settings.botCheckPending"), class: "notify-bot-status-pending", title: "" };
   }
 
   if (telegramSetupIssues.value.length > 0) {
     return {
-      label: "Настройка",
+      label: t("settings.botSetup"),
       class: "notify-bot-status-warn",
       title: telegramSetupWarning.value,
     };
@@ -128,17 +133,17 @@ const botHealth = computed(() => {
     parts.push(form.value.telegram_bot_check_message);
   }
   if (form.value.telegram_bot_checked_at) {
-    parts.push(`Проверка: ${formatDateTime(form.value.telegram_bot_checked_at)}`);
+    parts.push(t("settings.botCheckTime", { value: formatDateTime(form.value.telegram_bot_checked_at) }));
   }
   const title = parts.join("\n");
 
   if (form.value.telegram_bot_check_ok === true) {
-    return { label: "Бот OK", class: "notify-bot-status-ok", title };
+    return { label: t("settings.botOk"), class: "notify-bot-status-ok", title };
   }
   if (form.value.telegram_bot_check_ok === false) {
-    return { label: "Ошибка", class: "notify-bot-status-error", title };
+    return { label: t("settings.botError"), class: "notify-bot-status-error", title };
   }
-  return { label: "Не проверен", class: "notify-bot-status-idle", title };
+  return { label: t("settings.botUnchecked"), class: "notify-bot-status-idle", title };
 });
 
 function formatDuration(minutes: number): string {
@@ -147,13 +152,13 @@ function formatDuration(minutes: number): string {
   }
   if (minutes % 1440 === 0) {
     const days = minutes / 1440;
-    return pluralRu(days, "день", "дня", "дней");
+    return t("common.days", days);
   }
   if (minutes % 60 === 0) {
     const hours = minutes / 60;
-    return pluralRu(hours, "час", "часа", "часов");
+    return t("common.hours", hours);
   }
-  return pluralRu(minutes, "минута", "минуты", "минут");
+  return t("common.minutes", minutes);
 }
 
 async function runBotCheck(options: { silent?: boolean } = {}) {
@@ -179,7 +184,7 @@ async function runBotCheck(options: { silent?: boolean } = {}) {
   } catch (checkError) {
     if (!options.silent) {
       error.value =
-        checkError instanceof Error ? checkError.message : "Не удалось проверить бота";
+        checkError instanceof Error ? checkError.message : t("errors.checkBot");
     }
   } finally {
     botChecking.value = false;
@@ -203,7 +208,7 @@ async function loadSettings() {
     form.value = null;
     savedForm.value = null;
     error.value =
-      loadError instanceof Error ? loadError.message : "Не удалось загрузить настройки";
+      loadError instanceof Error ? loadError.message : t("errors.loadSettings");
   } finally {
     loading.value = false;
   }
@@ -218,7 +223,7 @@ function applyDraftRecipient(options: { openOnError?: boolean } = {}): boolean {
   if (result.error) {
     error.value = result.error;
     if (options.openOnError) {
-      openTelegram.value = true;
+      openRecipientPanel();
     }
     return false;
   }
@@ -229,8 +234,37 @@ function applyDraftRecipient(options: { openOnError?: boolean } = {}): boolean {
   return true;
 }
 
-function addRecipient() {
-  applyDraftRecipient();
+function openRecipientPanel() {
+  openTelegram.value = true;
+  error.value = "";
+  recipientPanelOpen.value = true;
+}
+
+function closeRecipientPanel() {
+  recipientPanelOpen.value = false;
+  draftRecipient.value = emptyDraftRecipient();
+}
+
+function submitRecipient() {
+  if (!form.value) {
+    return;
+  }
+
+  if (!draftRecipient.value.chat_id.trim()) {
+    error.value = t("settings.chatIdRequired");
+    return;
+  }
+
+  const result = commitDraftRecipient(form.value, draftRecipient.value);
+  if (result.error) {
+    error.value = result.error;
+    return;
+  }
+
+  form.value = result.form;
+  draftRecipient.value = result.draft;
+  error.value = "";
+  recipientPanelOpen.value = false;
 }
 
 function removeRecipient(index: number) {
@@ -243,9 +277,9 @@ function discardChanges() {
   }
   form.value = cloneNotificationSettings(savedForm.value);
   botTokenInput.value = "";
-  draftRecipient.value = { chat_id: "", label: "", kind: "user" };
+  draftRecipient.value = emptyDraftRecipient();
+  recipientPanelOpen.value = false;
   error.value = "";
-  notice.value = "";
 }
 
 async function saveSettings() {
@@ -259,7 +293,6 @@ async function saveSettings() {
 
   saving.value = true;
   error.value = "";
-  notice.value = "";
 
   const payload: NotificationSettingsUpdate = {
     telegram_enabled: form.value.telegram_enabled,
@@ -281,22 +314,14 @@ async function saveSettings() {
     form.value = updated;
     savedForm.value = cloneNotificationSettings(updated);
     botTokenInput.value = "";
-    notice.value = "Сохранено";
+    toast.success(t("common.saved"));
   } catch (saveError) {
     error.value =
-      saveError instanceof Error ? saveError.message : "Не удалось сохранить";
+      saveError instanceof Error ? saveError.message : t("errors.saveSettings");
   } finally {
     saving.value = false;
   }
 }
-
-watch(notice, (value) => {
-  if (value) {
-    window.setTimeout(() => {
-      notice.value = "";
-    }, 2500);
-  }
-});
 
 watch(
   () => form.value?.telegram_enabled,
@@ -324,13 +349,13 @@ onMounted(loadSettings);
     <div class="board-shell settings-board-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
-          <h1 class="page-title">Оповещение</h1>
+          <h1 class="page-title">{{ $t("settings.notificationsTitle") }}</h1>
           <p class="page-meta">{{ headerMeta }}</p>
         </div>
 
         <div v-if="isDirty && form" class="board-toolbar-actions">
           <button class="btn-ghost px-4 py-2 text-sm" type="button" :disabled="saving" @click="discardChanges">
-            Отменить
+            {{ $t("common.cancel") }}
           </button>
           <button
             class="btn-primary px-4 py-2 text-sm disabled:opacity-60"
@@ -338,18 +363,17 @@ onMounted(loadSettings);
             :disabled="saving"
             @click="saveSettings"
           >
-            {{ saving ? "Сохранение…" : "Сохранить" }}
+            {{ saving ? $t("common.saving") : $t("common.save") }}
           </button>
         </div>
       </header>
 
       <p v-if="error" class="alert-error mx-4 mt-3 shrink-0">{{ error }}</p>
-      <p v-else-if="notice" class="alert-notice mx-4 mt-3 shrink-0">{{ notice }}</p>
 
       <div v-if="loading" class="settings-body settings-body-center">
         <div class="loading-state">
           <span class="loading-spinner" aria-hidden="true" />
-          <p class="text-sm text-[var(--color-text-secondary)]">Загрузка…</p>
+          <p class="text-sm text-(--color-text-secondary)">{{ $t("common.loading") }}</p>
         </div>
       </div>
 
@@ -358,10 +382,10 @@ onMounted(loadSettings);
           <span class="jobs-empty-icon">
             <BellAlertIcon class="size-7" />
           </span>
-          <p class="jobs-empty-title">Не удалось загрузить настройки</p>
+          <p class="jobs-empty-title">{{ $t("errors.loadSettings") }}</p>
           <button class="btn btn-secondary mt-2" type="button" @click="loadSettings">
             <ArrowPathIcon class="icon-sm" />
-            Повторить
+            {{ $t("common.retry") }}
           </button>
         </div>
       </div>
@@ -375,8 +399,8 @@ onMounted(loadSettings);
                   <ClockIcon />
                 </span>
                 <div>
-                  <p class="drawer-eyebrow">Напоминания</p>
-                  <h2 class="settings-panel-title">Правила</h2>
+                  <p class="drawer-eyebrow">{{ $t("settings.notificationsTitle") }}</p>
+                  <h2 class="settings-panel-title">{{ $t("settings.notificationRules") }}</h2>
                 </div>
               </div>
             </header>
@@ -384,7 +408,7 @@ onMounted(loadSettings);
             <div class="settings-panel-body">
               <form class="task-form notify-rules-form">
                 <label class="form-field">
-                  <span class="form-label">Интервал, мин</span>
+                  <span class="form-label">{{ $t("settings.reminderInterval") }}</span>
                   <input
                     v-model.number="form.default_reminder_interval_minutes"
                     class="field px-3 py-2"
@@ -396,7 +420,7 @@ onMounted(loadSettings);
                 </label>
 
                 <label class="form-field">
-                  <span class="form-label">Долго в работе, мин</span>
+                  <span class="form-label">{{ $t("settings.staleInProgress") }}</span>
                   <input
                     v-model.number="form.stale_in_progress_minutes"
                     class="field px-3 py-2"
@@ -408,7 +432,7 @@ onMounted(loadSettings);
                 </label>
 
                 <label class="form-field">
-                  <span class="form-label">Долго в плане, мин</span>
+                  <span class="form-label">{{ $t("settings.stalePlanned") }}</span>
                   <input
                     v-model.number="form.stale_planned_minutes"
                     class="field px-3 py-2"
@@ -420,18 +444,18 @@ onMounted(loadSettings);
                 </label>
 
                 <div class="notify-rules-quiet">
-                  <p class="jobs-filter-label">Тихие часы</p>
+                  <p class="jobs-filter-label">{{ $t("settings.quietHours") }}</p>
                   <div class="notify-rules-quiet-fields">
                     <label class="form-field">
-                      <span class="form-label">С</span>
+                      <span class="form-label">{{ $t("settings.quietFrom") }}</span>
                       <input v-model="form.quiet_hours_start" class="field px-3 py-2" type="time" />
                     </label>
                     <label class="form-field">
-                      <span class="form-label">До</span>
+                      <span class="form-label">{{ $t("settings.quietTo") }}</span>
                       <input v-model="form.quiet_hours_end" class="field px-3 py-2" type="time" />
                     </label>
                   </div>
-                  <p class="notify-field-hint">В этот период напоминания не отправляются</p>
+                  <p class="notify-field-hint">{{ $t("settings.quietHint") }}</p>
                 </div>
               </form>
             </div>
@@ -468,7 +492,7 @@ onMounted(loadSettings);
                     {{ formatDateTime(form.telegram_bot_checked_at) }}
                   </span>
                 </span>
-                <label class="notify-switch" title="Включить канал" @click.stop>
+                <label class="notify-switch" :title="$t('common.enabled')" @click.stop>
                   <input v-model="form.telegram_enabled" type="checkbox" />
                   <span class="notify-switch-track" aria-hidden="true">
                     <span class="notify-switch-thumb" />
@@ -485,15 +509,15 @@ onMounted(loadSettings);
 
                 <form class="task-form notify-channel-form">
                   <label class="form-field">
-                    <span class="form-label">Токен бота</span>
+                    <span class="form-label">{{ $t("settings.botToken") }}</span>
                     <input
                       v-model="botTokenInput"
                       class="field px-3 py-2 notify-token-field"
                       type="text"
                       :placeholder="
                         form.telegram_bot_token_set
-                          ? 'Токен сохранён — новый для замены'
-                          : '1234567890:ABC...'
+                          ? $t('settings.tokenSavedPlaceholder')
+                          : $t('settings.tokenPlaceholder')
                       "
                       autocomplete="off"
                       spellcheck="false"
@@ -512,8 +536,18 @@ onMounted(loadSettings);
 
                 <div class="notify-recipients-block">
                   <div class="notify-recipients-head">
-                    <span class="form-label">Получатели</span>
-                    <span class="notify-field-hint">@userinfobot · @getidsbot</span>
+                    <div class="notify-recipients-head-copy">
+                      <span class="form-label">{{ $t("settings.recipients") }}</span>
+                      <span class="notify-field-hint">@userinfobot · @getidsbot</span>
+                    </div>
+                    <button
+                      class="btn btn-secondary notify-recipients-add-btn"
+                      type="button"
+                      @click="openRecipientPanel"
+                    >
+                      <PlusIcon class="icon-sm" />
+                      {{ $t("settings.addRecipient") }}
+                    </button>
                   </div>
 
                   <ul v-if="form.telegram_recipients.length" class="notify-recipient-list">
@@ -537,48 +571,17 @@ onMounted(loadSettings);
                         <span class="notify-recipient-name">{{ item.label || item.chat_id }}</span>
                         <span class="notify-recipient-meta">{{ item.chat_id }}</span>
                       </div>
-                        <button class="icon-btn notify-icon-btn" type="button" title="Удалить" @click="removeRecipient(index)">
+                      <button
+                        class="icon-btn notify-icon-btn"
+                        type="button"
+                        :title="$t('common.delete')"
+                        @click="removeRecipient(index)"
+                      >
                         <TrashIcon class="icon-sm" />
                       </button>
                     </li>
                   </ul>
-                  <p v-else class="notify-recipient-empty">Нет получателей</p>
-                  <p v-if="hasDraftRecipient(draftRecipient)" class="notify-field-hint">
-                    Новый получатель будет добавлен при сохранении
-                  </p>
-
-                  <form class="notify-add-form" @submit.prevent="addRecipient">
-                    <label class="form-field">
-                      <span class="form-label">Тип</span>
-                      <select v-model="draftRecipient.kind" class="field px-3 py-2">
-                        <option value="user">Личный чат</option>
-                        <option value="group">Группа</option>
-                      </select>
-                    </label>
-                    <label class="form-field">
-                      <span class="form-label">Название</span>
-                      <input
-                        v-model="draftRecipient.label"
-                        class="field px-3 py-2"
-                        type="text"
-                        placeholder="Например: Я"
-                      />
-                    </label>
-                    <label class="form-field notify-add-chat">
-                      <span class="form-label">Chat ID</span>
-                      <div class="notify-add-chat-row">
-                        <input
-                          v-model="draftRecipient.chat_id"
-                          class="field px-3 py-2"
-                          type="text"
-                          placeholder="-1001234567890"
-                        />
-                        <button class="btn btn-secondary notify-add-btn" type="submit" title="Добавить">
-                          <PlusIcon />
-                        </button>
-                      </div>
-                    </label>
-                  </form>
+                  <p v-else class="notify-recipient-empty">{{ $t("settings.noRecipients") }}</p>
                 </div>
               </div>
             </section>
@@ -586,5 +589,76 @@ onMounted(loadSettings);
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <Transition name="slide-panel">
+        <div
+          v-if="recipientPanelOpen && form"
+          class="drawer-backdrop"
+          @click.self="closeRecipientPanel"
+        >
+          <aside
+            class="drawer-panel drawer-panel-narrow"
+            role="dialog"
+            aria-labelledby="recipient-drawer-title"
+            aria-modal="true"
+          >
+            <header class="drawer-header">
+              <div>
+                <p class="drawer-eyebrow">Telegram</p>
+                <h2 id="recipient-drawer-title" class="drawer-title">
+                  {{ $t("settings.newRecipient") }}
+                </h2>
+              </div>
+              <button class="icon-btn" type="button" @click="closeRecipientPanel">
+                <XMarkIcon class="icon-sm" />
+              </button>
+            </header>
+
+            <div class="drawer-body">
+              <p v-if="error" class="alert-error">{{ error }}</p>
+
+              <form class="task-form" @submit.prevent="submitRecipient">
+                <label class="form-field">
+                  <span class="form-label">{{ $t("common.type") }}</span>
+                  <select v-model="draftRecipient.kind" class="field px-3 py-2">
+                    <option value="user">{{ $t("settings.recipientTypeUser") }}</option>
+                    <option value="group">{{ $t("settings.recipientTypeGroup") }}</option>
+                  </select>
+                </label>
+
+                <label class="form-field">
+                  <span class="form-label">{{ $t("common.name") }}</span>
+                  <input
+                    v-model="draftRecipient.label"
+                    class="field px-3 py-2"
+                    type="text"
+                    :placeholder="$t('settings.recipientNamePlaceholder')"
+                  />
+                </label>
+
+                <label class="form-field">
+                  <span class="form-label">{{ $t("settings.chatId") }}</span>
+                  <input
+                    v-model="draftRecipient.chat_id"
+                    class="field px-3 py-2"
+                    type="text"
+                    placeholder="-1001234567890"
+                    required
+                  />
+                  <span class="notify-field-hint">{{ $t("settings.chatIdHint") }}</span>
+                </label>
+              </form>
+            </div>
+
+            <footer class="drawer-footer">
+              <button class="btn-primary px-4 py-2 text-sm" type="button" @click="submitRecipient">
+                {{ $t("settings.addRecipient") }}
+              </button>
+            </footer>
+          </aside>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>

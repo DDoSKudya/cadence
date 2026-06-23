@@ -4,6 +4,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.platform_status import collect_platform_status
+from apps.common.service_logs import SERVICE_IDS, get_service_logs, log_file_exists
 from apps.core.models import ProjectSettings, Tag
 from apps.core.serializers import (
     LoginSerializer,
@@ -63,6 +65,40 @@ class TelegramBotCheckView(APIView):
                 "message": result.message,
                 "checked_at": result.checked_at,
                 "bot_username": result.bot_username,
+            },
+        )
+
+
+class PlatformStatusView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        settings_obj = ProjectSettings.load()
+        status = collect_platform_status(project_timezone=settings_obj.timezone)
+        return Response(status.as_response())
+
+
+class PlatformServiceLogsView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, service_id: str):
+        if service_id not in SERVICE_IDS:
+            return Response(
+                {"detail": "Unknown service."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            limit = int(request.query_params.get("limit", 200))
+        except (TypeError, ValueError):
+            limit = 200
+
+        entries = get_service_logs(service_id, limit=limit)
+        return Response(
+            {
+                "service_id": service_id,
+                "entries": entries,
+                "has_file": log_file_exists(service_id),
             },
         )
 

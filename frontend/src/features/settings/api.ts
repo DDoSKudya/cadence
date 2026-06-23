@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 import type { SettingsColumn } from "./types";
@@ -12,7 +13,7 @@ async function parseJson<T>(response: Response, fallback: string): Promise<T> {
 
 export async function fetchColumns(): Promise<SettingsColumn[]> {
   const response = await apiFetch("/api/v1/columns/");
-  return parseJson(response, "Не удалось загрузить колонки");
+  return parseJson(response, t("errors.loadColumns"));
 }
 
 export async function reorderColumns(columnIds: number[]): Promise<SettingsColumn[]> {
@@ -20,7 +21,7 @@ export async function reorderColumns(columnIds: number[]): Promise<SettingsColum
     method: "POST",
     body: JSON.stringify({ column_ids: columnIds }),
   });
-  return parseJson(response, "Не удалось изменить порядок");
+  return parseJson(response, t("errors.reorderColumns"));
 }
 
 export interface ColumnCreatePayload {
@@ -39,7 +40,7 @@ export async function createColumn(payload: ColumnCreatePayload): Promise<Settin
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "Не удалось создать колонку");
+  return parseJson(response, t("errors.createColumn"));
 }
 
 export async function updateColumn(
@@ -50,12 +51,12 @@ export async function updateColumn(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "Не удалось сохранить колонку");
+  return parseJson(response, t("errors.saveColumn"));
 }
 
 export class ColumnInUseError extends Error {
   constructor() {
-    super("В колонке есть задачи. Сначала перенесите их.");
+    super(t("errors.columnHasTasks"));
     this.name = "ColumnInUseError";
   }
 }
@@ -68,6 +69,6 @@ export async function deleteColumn(columnId: number): Promise<void> {
     throw new ColumnInUseError();
   }
   if (!response.ok) {
-    throw new Error(await readApiError(response, "Не удалось убрать колонку"));
+    throw new Error(await readApiError(response, t("errors.deleteColumn")));
   }
 }

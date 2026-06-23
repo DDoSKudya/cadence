@@ -47,6 +47,7 @@ class ProjectSettingsSerializer(serializers.ModelSerializer):
         model = ProjectSettings
         fields = (
             "timezone",
+            "language",
             "json_inbox_enabled",
             "telegram_enabled",
             "telegram_bot_token_set",

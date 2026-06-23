@@ -5,8 +5,9 @@ import LoginView from "@/features/auth/views/LoginView.vue";
 import ArchiveView from "@/features/archive/views/ArchiveView.vue";
 import BoardView from "@/features/board/views/BoardView.vue";
 import ColumnsSettingsView from "@/features/settings/views/ColumnsSettingsView.vue";
+import GeneralSettingsView from "@/features/settings/views/GeneralSettingsView.vue";
 import NotificationsSettingsView from "@/features/settings/views/NotificationsSettingsView.vue";
-import JobsView from "@/features/jobs/views/JobsView.vue";
+import AnalyticsView from "@/features/analytics/views/AnalyticsView.vue";
 import WeekReviewView from "@/features/week-review/views/WeekReviewView.vue";
 import { useAuthStore } from "@/stores/auth";
 
@@ -43,6 +44,11 @@ export const router = createRouter({
           component: WeekReviewView,
         },
         {
+          path: "settings/general",
+          name: "settings-general",
+          component: GeneralSettingsView,
+        },
+        {
           path: "settings/columns",
           name: "settings-columns",
           component: ColumnsSettingsView,
@@ -57,9 +63,13 @@ export const router = createRouter({
           redirect: { name: "settings-notifications" },
         },
         {
+          path: "analytics",
+          name: "analytics",
+          component: AnalyticsView,
+        },
+        {
           path: "jobs",
-          name: "jobs",
-          component: JobsView,
+          redirect: { name: "settings-general", query: { service: "worker" } },
         },
       ],
     },

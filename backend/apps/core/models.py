@@ -50,7 +50,16 @@ class ApiKey(models.Model):
 class ProjectSettings(models.Model):
     id: int
 
+    class Language(models.TextChoices):
+        EN = "en", "English"
+        RU = "ru", "Russian"
+
     timezone = models.CharField(max_length=64, default=settings.TIME_ZONE)
+    language = models.CharField(
+        max_length=2,
+        choices=Language.choices,
+        default=Language.EN,
+    )
     json_inbox_enabled = models.BooleanField(default=True)
     telegram_enabled = models.BooleanField(default=False)
     telegram_bot_token = models.CharField(max_length=255, blank=True, default="")

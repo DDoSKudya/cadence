@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   BellIcon,
   CalendarDaysIcon,
@@ -16,6 +17,7 @@ import type { TaskDetail } from "@/features/board/types";
 import { fromLocalInput, toLocalInput } from "@/lib/task-form";
 
 const board = useBoardStore();
+const { t } = useI18n();
 
 const task = ref<TaskDetail | null>(null);
 const loading = ref(false);
@@ -35,7 +37,7 @@ const selectedTagSlugs = ref<string[]>([]);
 
 const isOpen = computed(() => board.taskPanel !== null);
 const isCreate = computed(() => board.taskPanel?.mode === "create");
-const panelTitle = computed(() => (isCreate.value ? "Новая задача" : "Задача"));
+const panelTitle = computed(() => (isCreate.value ? t("board.newTask") : t("board.task")));
 const isClosed = computed(() => Boolean(task.value?.closed_at));
 
 const defaultColumnId = computed(() => {
@@ -76,7 +78,7 @@ async function loadTask(taskId: number) {
     syncForm(loaded);
   } catch (loadError) {
     formError.value =
-      loadError instanceof Error ? loadError.message : "Не удалось загрузить задачу";
+      loadError instanceof Error ? loadError.message : t("board.loadFailed");
     task.value = null;
   } finally {
     loading.value = false;
@@ -136,11 +138,11 @@ async function submitCreate() {
   const targetColumnId = columnId.value ?? defaultColumnId.value;
 
   if (!trimmed) {
-    formError.value = "Введите название задачи";
+    formError.value = t("board.enterTaskTitle");
     return;
   }
   if (targetColumnId === null) {
-    formError.value = "Нет доступных колонок";
+    formError.value = t("board.noColumns");
     return;
   }
 
@@ -160,7 +162,7 @@ async function submitCreate() {
     closePanel();
   } catch (saveError) {
     formError.value =
-      saveError instanceof Error ? saveError.message : "Не удалось создать задачу";
+      saveError instanceof Error ? saveError.message : t("board.createFailed");
   } finally {
     saving.value = false;
   }
@@ -187,7 +189,7 @@ async function saveTask() {
     await board.refreshAfterDrawer();
   } catch (saveError) {
     formError.value =
-      saveError instanceof Error ? saveError.message : "Не удалось сохранить задачу";
+      saveError instanceof Error ? saveError.message : t("board.saveFailed");
   } finally {
     saving.value = false;
   }
@@ -205,7 +207,7 @@ async function closeTaskAction() {
     await board.refreshAfterDrawer();
   } catch (closeError) {
     formError.value =
-      closeError instanceof Error ? closeError.message : "Не удалось закрыть задачу";
+      closeError instanceof Error ? closeError.message : t("board.closeFailed");
   } finally {
     closing.value = false;
   }
@@ -224,7 +226,9 @@ async function closeTaskAction() {
         >
         <header class="drawer-header">
           <div>
-            <p class="drawer-eyebrow">{{ isCreate ? "Создание" : "Редактирование" }}</p>
+            <p class="drawer-eyebrow">
+              {{ isCreate ? $t("board.createEyebrow") : $t("board.editEyebrow") }}
+            </p>
             <h2 :id="isCreate ? 'task-create-title' : 'task-edit-title'" class="drawer-title">
               {{ panelTitle }}
             </h2>
@@ -235,7 +239,7 @@ async function closeTaskAction() {
         </header>
 
         <div class="drawer-body">
-          <p v-if="loading" class="text-sm text-[var(--color-text-secondary)]">Загрузка...</p>
+          <p v-if="loading" class="text-sm text-(--color-text-secondary)">{{ $t("common.loading") }}</p>
           <p v-else-if="formError" class="alert-error">{{ formError }}</p>
 
           <form
@@ -244,29 +248,29 @@ async function closeTaskAction() {
             @submit.prevent="isCreate ? submitCreate() : saveTask()"
           >
             <label class="form-field">
-              <span class="form-label">Название</span>
+              <span class="form-label">{{ $t("common.title") }}</span>
               <input
                 ref="titleInput"
                 v-model="title"
                 class="field px-3 py-2"
-                placeholder="Что нужно сделать?"
+                :placeholder="$t('board.titlePlaceholder')"
                 required
                 type="text"
               />
             </label>
 
             <label class="form-field">
-              <span class="form-label">Описание</span>
+              <span class="form-label">{{ $t("common.description") }}</span>
               <textarea
                 v-model="description"
                 class="field px-3 py-2"
-                placeholder="Детали, контекст, критерии готовности..."
+                :placeholder="$t('board.descriptionPlaceholder')"
                 rows="4"
               />
             </label>
 
             <label v-if="isCreate" class="form-field">
-              <span class="form-label">Колонка</span>
+              <span class="form-label">{{ $t("board.column") }}</span>
               <select v-model="columnId" class="field px-3 py-2">
                 <option v-for="column in board.sortedColumns" :key="column.id" :value="column.id">
                   {{ column.name }}
@@ -275,7 +279,7 @@ async function closeTaskAction() {
             </label>
 
             <label class="form-field">
-              <span class="form-label">Приоритет</span>
+              <span class="form-label">{{ $t("common.priority") }}</span>
               <select v-model="priority" class="field px-3 py-2">
                 <option value="high">{{ priorityLabel("high") }}</option>
                 <option value="normal">{{ priorityLabel("normal") }}</option>
@@ -286,7 +290,7 @@ async function closeTaskAction() {
             <label class="form-field">
               <span class="form-label">
                 <CalendarDaysIcon class="icon-sm inline" />
-                Срок
+                {{ $t("board.dueDate") }}
               </span>
               <input v-model="dueAt" class="field px-3 py-2" type="datetime-local" />
             </label>
@@ -294,12 +298,12 @@ async function closeTaskAction() {
             <label class="form-field">
               <span class="form-label">
                 <LinkIcon class="icon-sm inline" />
-                Ссылка на результат
+                {{ $t("board.evidenceUrl") }}
               </span>
               <input
                 v-model="evidenceUrl"
                 class="field px-3 py-2"
-                placeholder="https://..."
+                :placeholder="$t('board.evidencePlaceholder')"
                 type="url"
               />
             </label>
@@ -308,14 +312,14 @@ async function closeTaskAction() {
               <input v-model="reminderEnabled" type="checkbox" />
               <span class="form-label-inline">
                 <BellIcon class="icon-sm" />
-                Напоминания включены
+                {{ $t("board.remindersEnabled") }}
               </span>
             </label>
 
             <fieldset v-if="board.tags.length" class="form-field">
               <legend class="form-label">
                 <TagIcon class="icon-sm inline" />
-                Теги
+                {{ $t("common.tags") }}
               </legend>
               <div class="tag-picker">
                 <label
@@ -337,9 +341,6 @@ async function closeTaskAction() {
         </div>
 
         <footer v-if="isCreate || (task && !loading)" class="drawer-footer">
-          <button class="btn-ghost px-4 py-2 text-sm" type="button" @click="closePanel">
-            Отмена
-          </button>
           <button
             v-if="isCreate"
             class="btn-primary px-4 py-2 text-sm disabled:opacity-60"
@@ -347,7 +348,7 @@ async function closeTaskAction() {
             type="button"
             @click="submitCreate"
           >
-            Создать
+            {{ saving ? $t("common.saving") : $t("common.create") }}
           </button>
           <template v-else>
             <button
@@ -356,7 +357,7 @@ async function closeTaskAction() {
               type="button"
               @click="saveTask"
             >
-              Сохранить
+              {{ saving ? $t("common.saving") : $t("common.save") }}
             </button>
             <button
               v-if="!isClosed"
@@ -366,7 +367,7 @@ async function closeTaskAction() {
               @click="closeTaskAction"
             >
               <CheckCircleIcon class="icon-sm" />
-              Закрыть
+              {{ closing ? $t("board.closing") : $t("board.closeTask") }}
             </button>
           </template>
         </footer>

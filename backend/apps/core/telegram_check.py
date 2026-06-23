@@ -6,6 +6,7 @@ from datetime import datetime
 
 from django.utils import timezone
 
+from apps.common.i18n import t
 from apps.core.models import ProjectSettings
 
 
@@ -22,7 +23,7 @@ def check_telegram_bot(token: str) -> TelegramBotCheckResult:
     if not token.strip():
         return TelegramBotCheckResult(
             ok=False,
-            message="Токен бота не задан",
+            message=t("telegram.check.tokenMissing"),
             checked_at=checked_at,
         )
 
@@ -37,7 +38,7 @@ def check_telegram_bot(token: str) -> TelegramBotCheckResult:
 
     try:
         me = asyncio.run(_fetch_me())
-    except Exception as exc:  # noqa: BLE001 — surface Telegram errors to UI
+    except Exception as exc:
         return TelegramBotCheckResult(
             ok=False,
             message=str(exc)[:255],
@@ -47,7 +48,7 @@ def check_telegram_bot(token: str) -> TelegramBotCheckResult:
     username = me.username or ""
     return TelegramBotCheckResult(
         ok=True,
-        message=f"@{username}" if username else "Бот доступен",
+        message=f"@{username}" if username else t("telegram.check.botAvailable"),
         checked_at=checked_at,
         bot_username=username or None,
     )

@@ -26,11 +26,13 @@ INSTALLED_APPS = [
     "apps.jobs.apps.JobsConfig",
     "apps.imports.apps.ImportsConfig",
     "apps.notifications.apps.NotificationsConfig",
+    "apps.analytics.apps.AnalyticsConfig",
     "apps.telegram_bot.apps.TelegramBotConfig",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.request_id.RequestIdMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -99,6 +101,47 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cadence API",
     "VERSION": "1.0.0",
+    "DESCRIPTION": "Personal weekly Kanban API for Cadence.",
+}
+
+LOG_LEVEL = env("LOG_LEVEL")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {"()": "apps.common.request_id.RequestIdFilter"},
+    },
+    "formatters": {
+        "standard": {
+            "format": (
+                "%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s"
+            ),
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "standard",
+            "filters": ["request_id"],
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "cadence": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
 }
 
 CELERY_BROKER_URL = env("CELERY_BROKER_URL")

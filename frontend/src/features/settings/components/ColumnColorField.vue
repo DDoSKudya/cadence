@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import {
-  COLUMN_COLOR_OPTIONS,
+  columnColorOptions,
   colorSwatchClass,
   colorToHex,
   isHexColor,
@@ -11,6 +11,7 @@ import {
 const model = defineModel<string>({ required: true });
 
 const customHex = ref("#64748b");
+const options = computed(() => columnColorOptions());
 
 watch(
   () => model.value,
@@ -31,9 +32,9 @@ function applyCustom() {
 
 <template>
   <div class="column-color-field">
-    <div class="color-drawer-grid" role="radiogroup" aria-label="Цвет колонки">
+    <div class="color-drawer-grid" role="radiogroup" :aria-label="$t('colors.columnColor')">
       <button
-        v-for="option in COLUMN_COLOR_OPTIONS"
+        v-for="option in options"
         :key="option.value"
         type="button"
         class="color-drawer-option"
@@ -53,11 +54,11 @@ function applyCustom() {
         v-model="customHex"
         class="color-custom-input"
         type="color"
-        aria-label="Свой цвет"
+        :aria-label="$t('colors.customColor')"
         @input="applyCustom"
       />
       <span class="color-custom-value">{{ customHex.toUpperCase() }}</span>
     </div>
-    <p v-if="isHexColor(model)" class="color-custom-note">Выбран свой цвет</p>
+    <p v-if="isHexColor(model)" class="color-custom-note">{{ $t("colors.customSelected") }}</p>
   </div>
 </template>

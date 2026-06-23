@@ -1,0 +1,144 @@
+.columns-action-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+.columns-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.column-color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.color-custom-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.color-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.color-drawer-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  transition:
+    border-color var(--motion-fast) var(--ease-soft),
+    background var(--motion-fast) var(--ease-soft);
+}
+
+.color-drawer-option:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.color-drawer-option-active {
+  border-color: rgb(91 110 232 / 0.35);
+  background: var(--color-primary-soft);
+}
+
+.color-drawer-option-label {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+
+.color-swatch-lg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
+.color-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  padding: 0.625rem 0.75rem;
+}
+
+.color-custom-input {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-custom-value {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--color-text-secondary);
+}
+
+.color-swatch {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgb(22 27 38 / 0.08);
+}
+
+.color-swatch-slate {
+  background: #64748b;
+}
+
+.color-swatch-blue {
+  background: #3b82f6;
+}
+
+.color-swatch-indigo {
+  background: #6366f1;
+}
+
+.color-swatch-teal {
+  background: #14b8a6;
+}
+
+.color-swatch-green {
+  background: #22c55e;
+}
+
+.color-swatch-amber {
+  background: #f59e0b;
+}
+
+.color-swatch-orange {
+  background: #f97316;
+}
+
+.color-swatch-red {
+  background: #ef4444;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

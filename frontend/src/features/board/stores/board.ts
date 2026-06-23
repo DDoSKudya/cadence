@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import { getCurrentWeekKey, shiftWeekKey } from "@/lib/week";
+import { getCurrentWeekKey } from "@/lib/week";
+import { t } from "@/i18n";
 
 import * as boardApi from "../api";
 import type { BoardColumn, BoardTask, Tag, TaskCreatePayload } from "../types";
@@ -89,7 +90,7 @@ export const useBoardStore = defineStore("board", () => {
       weekId.value = payload.week.id;
       columns.value = payload.columns;
     } catch (loadError) {
-      error.value = loadError instanceof Error ? loadError.message : "Не удалось загрузить доску";
+      error.value = loadError instanceof Error ? loadError.message : t("board.loadBoardFailed");
     } finally {
       loading.value = false;
     }
@@ -101,19 +102,6 @@ export const useBoardStore = defineStore("board", () => {
     } catch {
       tags.value = [];
     }
-  }
-
-  async function setWeekKey(nextWeekKey: string) {
-    weekKey.value = nextWeekKey;
-    await loadBoard();
-  }
-
-  async function shiftWeek(delta: number) {
-    await setWeekKey(shiftWeekKey(weekKey.value, delta));
-  }
-
-  async function goToCurrentWeek() {
-    await setWeekKey(getCurrentWeekKey());
   }
 
   async function createTask(payload: Omit<TaskCreatePayload, "week"> & { week?: string }) {
@@ -133,7 +121,7 @@ export const useBoardStore = defineStore("board", () => {
       removeTask(taskId);
       replaceTask(task);
     } catch (moveError) {
-      error.value = moveError instanceof Error ? moveError.message : "Не удалось переместить задачу";
+      error.value = moveError instanceof Error ? moveError.message : t("board.moveFailed");
       await loadBoard();
       throw moveError;
     }
@@ -179,9 +167,6 @@ export const useBoardStore = defineStore("board", () => {
     findColumn,
     loadBoard,
     loadTags,
-    setWeekKey,
-    shiftWeek,
-    goToCurrentWeek,
     createTask,
     moveTask,
     refreshAfterDrawer,

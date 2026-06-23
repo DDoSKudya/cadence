@@ -12,9 +12,13 @@ export function parseWeekKey(value: string): WeekParts {
   if (!match) {
     throw new Error("Invalid week key");
   }
+  const isoWeek = Number(match[2]);
+  if (isoWeek < 1 || isoWeek > 53) {
+    throw new Error("Invalid week key");
+  }
   return {
     isoYear: Number(match[1]),
-    isoWeek: Number(match[2]),
+    isoWeek,
   };
 }
 

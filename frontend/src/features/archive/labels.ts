@@ -1,16 +1,17 @@
 import { systemTypeLabel } from "@/features/board/labels";
+import { t } from "@/i18n";
 
-const EVENT_LABELS: Record<string, string> = {
-  created: "Создана",
-  updated: "Обновлена",
-  moved: "Перемещена",
-  closed: "Закрыта",
-  archived: "В архиве",
-  reopened: "Возвращена",
-  reminder_scheduled: "Напоминание",
-  notification_sent: "Уведомление",
-  telegram_action: "Telegram",
-  imported: "Импорт",
+const EVENT_LABEL_KEYS: Record<string, string> = {
+  created: "archive.eventTaskCreated",
+  updated: "archive.eventTaskUpdated",
+  moved: "archive.eventTaskMoved",
+  closed: "archive.eventTaskClosed",
+  archived: "archive.eventTaskArchived",
+  reopened: "archive.eventTaskReopened",
+  reminder_scheduled: "archive.eventReminderScheduled",
+  notification_sent: "archive.eventNotificationSent",
+  telegram_action: "archive.eventTelegramAction",
+  imported: "archive.eventImported",
 };
 
 const EVENT_TONE: Record<string, string> = {
@@ -26,24 +27,31 @@ const EVENT_TONE: Record<string, string> = {
   imported: "import",
 };
 
-const ACTOR_LABELS: Record<string, string> = {
-  user: "Пользователь",
-  api: "API",
-  import: "Импорт",
-  telegram: "Telegram",
-  system: "Система",
+const ACTOR_LABEL_KEYS: Record<string, string> = {
+  user: "archive.actorUser",
+  import: "imports.title",
+  system: "archive.actorSystem",
 };
 
-const SOURCE_LABELS: Record<string, string> = {
+const ACTOR_LITERALS: Record<string, string> = {
+  api: "API",
+  telegram: "Telegram",
+};
+
+const SOURCE_LABEL_KEYS: Record<string, string> = {
+  json_import: "archive.sourceJsonImport",
+  system: "archive.actorSystem",
+};
+
+const SOURCE_LITERALS: Record<string, string> = {
   ui: "UI",
   api: "API",
-  json_import: "JSON",
   telegram: "Telegram",
-  system: "Система",
 };
 
 export function eventTypeLabel(value: string): string {
-  return EVENT_LABELS[value] ?? value;
+  const key = EVENT_LABEL_KEYS[value];
+  return key ? t(key) : value;
 }
 
 export function eventTone(value: string): string {
@@ -51,11 +59,21 @@ export function eventTone(value: string): string {
 }
 
 export function actorLabel(value: string): string {
-  return ACTOR_LABELS[value] ?? value;
+  const literal = ACTOR_LITERALS[value];
+  if (literal) {
+    return literal;
+  }
+  const key = ACTOR_LABEL_KEYS[value];
+  return key ? t(key) : value;
 }
 
 export function sourceLabel(value: string): string {
-  return SOURCE_LABELS[value] ?? value;
+  const literal = SOURCE_LITERALS[value];
+  if (literal) {
+    return literal;
+  }
+  const key = SOURCE_LABEL_KEYS[value];
+  return key ? t(key) : value;
 }
 
 export function columnStatusLabel(systemType: string, name: string): string {
