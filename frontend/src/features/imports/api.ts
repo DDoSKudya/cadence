@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 export interface ImportLog {
@@ -24,5 +25,5 @@ export async function uploadImport(file: File): Promise<ImportLog> {
     method: "POST",
     body: formData,
   });
-  return parseJson(response, "Не удалось импортировать файл");
+  return parseJson(response, t("errors.importFile"));
 }

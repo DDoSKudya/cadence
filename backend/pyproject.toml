@@ -1,6 +1,6 @@
 [project]
 name = "backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "Cadence backend"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -46,6 +46,15 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 DJANGO_SETTINGS_MODULE = "cadence.settings.test"
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests", "apps"]
+addopts = ["--cov=apps", "--cov-report=term-missing", "--cov-fail-under=85"]
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
 
 [tool.mypy]
 python_version = "3.12"

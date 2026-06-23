@@ -1,4 +1,5 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -44,12 +45,12 @@ export async function fetchArchiveTasks(
 ): Promise<ArchiveListResponse> {
   const query = buildQuery(filters);
   const response = await apiFetch(`/api/v1/archive/tasks/?${query}`);
-  return parseJson(response, "Не удалось загрузить архив");
+  return parseJson(response, t("archive.loadFailed"));
 }
 
 export async function fetchArchiveTask(taskId: number): Promise<ArchiveTaskDetail> {
   const response = await apiFetch(`/api/v1/archive/tasks/${taskId}/`);
-  return parseJson(response, "Не удалось загрузить задачу");
+  return parseJson(response, t("board.loadFailed"));
 }
 
 export async function reopenArchiveTask(taskId: number): Promise<void> {
@@ -57,6 +58,6 @@ export async function reopenArchiveTask(taskId: number): Promise<void> {
     method: "POST",
   });
   if (!response.ok) {
-    throw new Error(await readApiError(response, "Не удалось вернуть задачу"));
+    throw new Error(await readApiError(response, t("errors.reopenTask")));
   }
 }

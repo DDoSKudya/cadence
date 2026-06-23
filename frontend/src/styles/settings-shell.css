@@ -1,0 +1,33 @@
+.settings-body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 1rem 1.125rem 1.25rem;
+}
+
+.settings-body-split {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.settings-body-center {
+  display: grid;
+  place-items: center;
+  overflow: auto;
+}
+
+.settings-board-shell {
+  min-height: 0;
+}
+
+.settings-split {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  gap: 1rem;
+  overflow: hidden;
+}

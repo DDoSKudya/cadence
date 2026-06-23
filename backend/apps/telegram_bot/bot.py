@@ -1,6 +1,7 @@
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from apps.common.i18n import t
 from apps.notifications.models import CallbackAction
 
 
@@ -25,21 +26,21 @@ def build_task_keyboard(task_id: int, notification_job_id: int) -> InlineKeyboar
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Выполнено",
+                    text=t("telegram.button.done"),
                     callback_data=f"{CallbackAction.TASK_DONE}:{suffix}",
                 ),
                 InlineKeyboardButton(
-                    text="В процессе",
+                    text=t("telegram.button.inProgress"),
                     callback_data=f"{CallbackAction.TASK_IN_PROGRESS}:{suffix}",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Отложить",
+                    text=t("telegram.button.snooze"),
                     callback_data=f"{CallbackAction.TASK_SNOOZE}:{suffix}",
                 ),
                 InlineKeyboardButton(
-                    text="Отключить",
+                    text=t("telegram.button.disableReminders"),
                     callback_data=f"{CallbackAction.TASK_CANCEL_REMINDERS}:{suffix}",
                 ),
             ],
@@ -59,24 +60,30 @@ def parse_callback_data(data: str) -> tuple[str, int, int | None]:
 
 
 def build_start_reply(*, chat_id: int, chat_type: str) -> str:
-    is_group = chat_type in ("group", "supergroup", "channel")
-    kind_label = "Группа" if is_group else "Личный чат"
+    is_group = chat_type in {"group", "supergroup", "channel"}
+    kind_key = (
+        "telegram.recipientKind.group" if is_group else "telegram.recipientKind.private"
+    )
+    kind_label = t(kind_key)
     recipient_kind = "group" if is_group else "user"
 
     lines = [
-        "Cadence — оповещения о задачах",
+        t("telegram.start.title"),
         "",
-        f"Chat ID: <code>{chat_id}</code>",
-        f"Тип: {kind_label}",
+        t("telegram.start.chatId", chat_id=chat_id),
+        t("telegram.start.type", kind=kind_label),
         "",
-        "Добавьте этот Chat ID в Cadence:",
-        "Настройки → Оповещение → Telegram → Получатели.",
-        f"Тип получателя: «{kind_label}» ({recipient_kind}).",
+        t("telegram.start.instructions"),
+        t("telegram.start.recipientPath"),
+        t(
+            "telegram.start.recipientType",
+            kind=kind_label,
+            kind_code=recipient_kind,
+        ),
+        "",
     ]
     if not is_group:
-        lines.append("")
-        lines.append("Для личных оповещений достаточно этого ID.")
+        lines.append(t("telegram.start.privateHint"))
     else:
-        lines.append("")
-        lines.append("Бот должен быть участником группы, чтобы отправлять сообщения.")
+        lines.append(t("telegram.start.groupHint"))
     return "\n".join(lines)

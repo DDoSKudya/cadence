@@ -14,9 +14,9 @@ async function onImported() {
 </script>
 
 <template>
-  <button class="btn-ghost px-3 py-2 text-sm" type="button" @click="open = true">
+  <button class="btn-ghost board-action-btn" type="button" @click="open = true">
     <ArrowUpTrayIcon class="icon-sm" />
-    Импорт задач
+    {{ $t("board.importButton") }}
   </button>
 
   <ImportJsonModal v-model:open="open" @imported="onImported" />

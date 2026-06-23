@@ -6,49 +6,81 @@ function jsonFile(name: string, payload: unknown): File {
   return new File([JSON.stringify(payload)], name, { type: "application/json" });
 }
 
-describe("parseImportFile", () => {
-  it("parses valid payload", async () => {
-    const file = jsonFile("batch.json", {
-      schema_version: "1.0",
-      idempotency_key: "test-1",
-      tasks: [{ title: "Задача", column: "planned", priority: "high", tags: ["a"] }],
-    });
+const validPayload = {
+  schema_version: "1.0",
+  idempotency_key: "key-1",
+  source: "mentor",
+  tasks: [{ title: "Task", column: "planned", priority: "high", tags: ["a"] }],
+};
 
-    const result = await parseImportFile(file);
-
+describe("parseImportFile EC", () => {
+  it("ec_valid_json_returns_valid_preview", async () => {
+    const result = await parseImportFile(jsonFile("ok.json", validPayload));
     expect(result.status).toBe("valid");
     if (result.status === "valid") {
+      expect(result.idempotencyKey).toBe("key-1");
       expect(result.tasks).toHaveLength(1);
-      expect(result.tasks[0]?.title).toBe("Задача");
     }
   });
 
-  it("returns invalid preview for broken json", async () => {
-    const file = new File(["{"], "broken.json", { type: "application/json" });
-
+  it.each([
+    ["not json", "ec_invalid_json"],
+    [
+      JSON.stringify({ schema_version: "2.0", idempotency_key: "k", tasks: [{}] }),
+      "ec_unsupported_schema",
+    ],
+    [
+      JSON.stringify({ schema_version: "1.0", tasks: [{ title: "x" }] }),
+      "ec_missing_idempotency_key",
+    ],
+    [
+      JSON.stringify({ schema_version: "1.0", idempotency_key: "k", tasks: [] }),
+      "ec_empty_tasks",
+    ],
+    [
+      JSON.stringify({
+        schema_version: "1.0",
+        idempotency_key: "a".repeat(181),
+        tasks: [{ title: "x" }],
+      }),
+      "ec_idempotency_key_too_long",
+    ],
+    [
+      JSON.stringify({
+        schema_version: "1.0",
+        idempotency_key: "k",
+        tasks: [{ title: "" }],
+      }),
+      "ec_missing_title",
+    ],
+    [
+      JSON.stringify({
+        schema_version: "1.0",
+        idempotency_key: "k",
+        tasks: [{ title: "x", priority: "urgent" }],
+      }),
+      "ec_invalid_priority",
+    ],
+    [
+      JSON.stringify({
+        schema_version: "1.0",
+        idempotency_key: "k",
+        week: "2024-W99",
+        tasks: [{ title: "x" }],
+      }),
+      "ec_invalid_week",
+    ],
+  ])("ec_invalid_import_returns_error: %s", async (content) => {
+    const file =
+      content === "not json"
+        ? new File(["not-json"], "bad.json", { type: "application/json" })
+        : new File([content], "bad.json", { type: "application/json" });
     const result = await parseImportFile(file);
-
     expect(result.status).toBe("invalid");
-    if (result.status === "invalid") {
-      expect(result.error).toBe("Некорректный JSON");
-    }
   });
 
-  it("returns invalid preview for schema errors without throwing", async () => {
-    const file = jsonFile("empty.json", {
-      schema_version: "1.0",
-      idempotency_key: "x",
-      tasks: [],
-    });
-
-    const result = await parseImportFile(file);
-
-    expect(result.status).toBe("invalid");
-  });
-});
-
-describe("priorityLabel", () => {
-  it("maps known priorities", () => {
-    expect(priorityLabel("high")).toBe("Высокий");
+  it("ec_priority_label_known_and_unknown", () => {
+    expect(priorityLabel("high")).toBe("High");
+    expect(priorityLabel("custom")).toBe("custom");
   });
 });

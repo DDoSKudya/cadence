@@ -1,0 +1,124 @@
+/* Vue transitions */
+.page-fade-enter-active {
+  transition: opacity var(--motion-medium) var(--ease-soft);
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+}
+
+.page-fade-leave-active {
+  transition: opacity var(--motion-fast) var(--ease-soft);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+.board-swap-enter-active,
+.board-swap-leave-active {
+  transition: opacity var(--motion-medium) var(--ease-soft);
+}
+
+.board-swap-enter-from,
+.board-swap-leave-to {
+  opacity: 0;
+}
+
+.settings-workspace-enter-active {
+  transition: opacity var(--motion-slow) var(--ease-emphasis);
+}
+
+.settings-workspace-leave-active {
+  transition: opacity var(--motion-fast) var(--ease-soft);
+}
+
+.settings-workspace-enter-from,
+.settings-workspace-leave-to {
+  opacity: 0;
+}
+
+.slide-panel-enter-active,
+.slide-panel-leave-active {
+  transition: opacity var(--motion-medium) var(--ease-soft);
+}
+
+.slide-panel-enter-active.drawer-backdrop,
+.slide-panel-leave-active.drawer-backdrop,
+.slide-panel-enter-active .drawer-backdrop,
+.slide-panel-leave-active .drawer-backdrop {
+  transition:
+    opacity var(--motion-medium) var(--ease-soft),
+    backdrop-filter var(--motion-medium) var(--ease-soft);
+}
+
+.slide-panel-enter-active.drawer-backdrop .drawer-panel,
+.slide-panel-leave-active.drawer-backdrop .drawer-panel,
+.slide-panel-enter-active .drawer-panel,
+.slide-panel-leave-active .drawer-panel {
+  transition: transform var(--motion-slow) var(--ease-emphasis);
+}
+
+.slide-panel-enter-from.drawer-backdrop,
+.slide-panel-leave-to.drawer-backdrop,
+.slide-panel-enter-from .drawer-backdrop,
+.slide-panel-leave-to .drawer-backdrop {
+  opacity: 0;
+  backdrop-filter: blur(0);
+}
+
+.slide-panel-enter-from.drawer-backdrop .drawer-panel,
+.slide-panel-leave-to.drawer-backdrop .drawer-panel,
+.slide-panel-enter-from .drawer-panel,
+.slide-panel-leave-to .drawer-panel {
+  transform: translateX(100%);
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity var(--motion-medium) var(--ease-soft);
+}
+
+.modal-fade-enter-active .modal-panel,
+.modal-fade-leave-active .modal-panel {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-slow) var(--ease-emphasis);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .modal-panel,
+.modal-fade-leave-to .modal-panel {
+  opacity: 0;
+  transform: translateY(0.75rem) scale(0.98);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

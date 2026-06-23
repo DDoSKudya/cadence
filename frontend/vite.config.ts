@@ -12,6 +12,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  optimizeDeps: {
+    include: ["echarts", "vue-echarts"],
+  },
   server: {
     host: "0.0.0.0",
     port: 5173,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 
 import BoardColumn from "@/features/board/components/BoardColumn.vue";
 import BoardCreateTask from "@/features/board/components/BoardCreateTask.vue";
@@ -8,17 +9,17 @@ import BoardImportJson from "@/features/board/components/BoardImportJson.vue";
 import TaskPanel from "@/features/board/components/TaskPanel.vue";
 import WeekSwitcher from "@/features/board/components/WeekSwitcher.vue";
 import { useBoardStore } from "@/features/board/stores/board";
-import { pluralRu } from "@/lib/plural";
 
 const board = useBoardStore();
+const { t } = useI18n();
 
 const totalTasks = computed(() =>
   board.sortedColumns.reduce((total, column) => total + column.tasks.length, 0),
 );
 
 const metaLine = computed(() => {
-  const tasks = pluralRu(totalTasks.value, "задача", "задачи", "задач");
-  const columns = pluralRu(board.sortedColumns.length, "колонка", "колонки", "колонок");
+  const tasks = t("board.taskCount", totalTasks.value);
+  const columns = t("board.columnCount", board.sortedColumns.length);
   return `${tasks} · ${columns}`;
 });
 
@@ -32,7 +33,7 @@ onMounted(async () => {
     <div class="board-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
-          <h1 class="page-title">{{ board.boardName || "Доска" }}</h1>
+          <h1 class="page-title">{{ board.boardName || $t("board.titleFallback") }}</h1>
           <p class="page-meta">{{ metaLine }}</p>
         </div>
 
@@ -56,7 +57,7 @@ onMounted(async () => {
         >
           <div class="loading-state">
             <span class="loading-spinner" aria-hidden="true" />
-            <p>Загрузка доски...</p>
+            <p>{{ $t("board.loading") }}</p>
           </div>
         </div>
 

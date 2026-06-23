@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.boards.models import SystemType
+from apps.common.i18n import format_notification_due_at, t
 from apps.core.models import ProjectSettings
 from apps.jobs.models import JobType
 from apps.jobs.services import JobService
@@ -202,15 +203,18 @@ class ReminderPlanningService:
     @staticmethod
     def _build_message(task: Task, reason: NotificationReason) -> str:
         labels = {
-            NotificationReason.OVERDUE: "Просрочена",
-            NotificationReason.STALE_IN_PROGRESS: "Долго в работе",
-            NotificationReason.STALE_PLANNED: "Долго в плане",
-            NotificationReason.REMINDER: "Напоминание",
-            NotificationReason.MANUAL: "Напоминание",
+            NotificationReason.OVERDUE: t("notifications.reason.overdue"),
+            NotificationReason.STALE_IN_PROGRESS: t(
+                "notifications.reason.staleInProgress",
+            ),
+            NotificationReason.STALE_PLANNED: t("notifications.reason.stalePlanned"),
+            NotificationReason.REMINDER: t("notifications.reason.reminder"),
+            NotificationReason.MANUAL: t("notifications.reason.reminder"),
         }
         lines = [labels[reason], task.title]
         if task.due_at is not None:
-            lines.append(f"Срок: {timezone.localtime(task.due_at):%d.%m.%Y %H:%M}")
+            due_value = format_notification_due_at(task.due_at)
+            lines.append(t("notifications.dueAt", value=due_value))
         return "\n".join(lines)
 
     @staticmethod

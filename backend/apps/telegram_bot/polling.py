@@ -6,19 +6,25 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
 from asgiref.sync import sync_to_async
 
+from apps.common.i18n import t
 from apps.notifications.actions import TelegramActionError, TelegramActionService
 from apps.telegram_bot.bot import build_start_reply, get_bot, parse_callback_data
 
 router = Router()
 
-CALLBACK_STATUS_LABELS: dict[str, str] = {
-    "closed": "✓ Задача закрыта",
-    "in_progress": "↻ В работе, напоминание перенесено",
-    "snoozed": "⏸ Отложено",
-    "reminders_cancelled": "🔕 Напоминания отключены",
-    "already_closed": "Задача уже закрыта",
-    "duplicate": "Уже обработано",
+CALLBACK_STATUS_KEYS = {
+    "closed": "telegram.callback.status.closed",
+    "in_progress": "telegram.callback.status.inProgress",
+    "snoozed": "telegram.callback.status.snoozed",
+    "reminders_cancelled": "telegram.callback.status.remindersCancelled",
+    "already_closed": "telegram.callback.status.alreadyClosed",
+    "duplicate": "telegram.callback.status.duplicate",
 }
+
+
+def callback_status_label(status: str) -> str:
+    key = CALLBACK_STATUS_KEYS.get(status, "telegram.callback.status.default")
+    return t(key)
 
 
 @router.message(CommandStart())
@@ -33,13 +39,13 @@ async def handle_start(message: Message) -> None:
 @router.callback_query()
 async def handle_callback(callback: CallbackQuery) -> None:
     if callback.data is None or callback.from_user is None:
-        await callback.answer("Некорректный запрос")
+        await callback.answer(t("telegram.callback.invalidRequest"))
         return
 
     try:
         action, task_id, notification_job_id = parse_callback_data(callback.data)
     except ValueError:
-        await callback.answer("Некорректный запрос")
+        await callback.answer(t("telegram.callback.invalidRequest"))
         return
 
     try:
@@ -52,11 +58,11 @@ async def handle_callback(callback: CallbackQuery) -> None:
             notification_job_id=notification_job_id,
         )
     except TelegramActionError:
-        await callback.answer("Ошибка обработки", show_alert=True)
+        await callback.answer(t("telegram.callback.processingError"), show_alert=True)
         return
 
     status = str(result.get("status", ""))
-    label = CALLBACK_STATUS_LABELS.get(status, "Готово")
+    label = callback_status_label(status)
     await callback.answer(label, show_alert=status in {"closed", "already_closed"})
 
     if isinstance(callback.message, Message) and status not in {"duplicate"}:

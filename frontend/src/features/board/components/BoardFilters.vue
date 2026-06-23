@@ -55,7 +55,7 @@ function resetFilters() {
       <input
         v-model="board.searchQuery"
         class="field px-3 py-2 text-sm"
-        placeholder="Поиск задач..."
+        :placeholder="$t('board.searchPlaceholder')"
         type="search"
       />
     </div>
@@ -86,8 +86,8 @@ function resetFilters() {
         <aside class="drawer-panel drawer-panel-narrow" role="dialog" aria-labelledby="filters-title" aria-modal="true">
           <header class="drawer-header">
             <div>
-              <p class="drawer-eyebrow">Доска</p>
-              <h2 id="filters-title" class="drawer-title">Фильтры</h2>
+              <p class="drawer-eyebrow">{{ $t("board.filtersEyebrow") }}</p>
+              <h2 id="filters-title" class="drawer-title">{{ $t("common.filters") }}</h2>
             </div>
             <button class="icon-btn" type="button" @click="closePanel">
               <XMarkIcon class="icon-sm" />
@@ -96,9 +96,9 @@ function resetFilters() {
 
           <div class="drawer-body space-y-4">
             <label class="form-field block text-sm">
-              <span class="form-label">Приоритет</span>
+              <span class="form-label">{{ $t("common.priority") }}</span>
               <select v-model="board.priorityFilter" class="field mt-1.5 px-3 py-2">
-                <option value="">Все</option>
+                <option value="">{{ $t("common.all") }}</option>
                 <option value="high">{{ priorityLabel("high") }}</option>
                 <option value="normal">{{ priorityLabel("normal") }}</option>
                 <option value="low">{{ priorityLabel("low") }}</option>
@@ -106,9 +106,9 @@ function resetFilters() {
             </label>
 
             <label class="form-field block text-sm">
-              <span class="form-label">Тег</span>
+              <span class="form-label">{{ $t("common.tag") }}</span>
               <select v-model="board.tagFilter" class="field mt-1.5 px-3 py-2">
-                <option value="">Все</option>
+                <option value="">{{ $t("common.all") }}</option>
                 <option v-for="tag in board.tags" :key="tag.id" :value="tag.slug">
                   {{ tag.name }}
                 </option>
@@ -116,12 +116,9 @@ function resetFilters() {
             </label>
           </div>
 
-          <footer class="drawer-footer">
+          <footer v-if="activeFilterCount > 0" class="drawer-footer">
             <button class="btn-ghost px-4 py-2 text-sm" type="button" @click="resetFilters">
-              Сбросить
-            </button>
-            <button class="btn-primary px-4 py-2 text-sm" type="button" @click="closePanel">
-              Готово
+              {{ $t("common.reset") }}
             </button>
           </footer>
         </aside>

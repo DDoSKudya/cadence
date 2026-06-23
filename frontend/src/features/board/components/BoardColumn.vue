@@ -66,13 +66,13 @@ async function onDragChange(event: DragChangeEvent) {
       </div>
       <p v-if="wipExceeded()" class="column-wip-warning">
         <ExclamationTriangleIcon class="icon-sm" />
-        Лимит {{ column.tasks.length }}/{{ column.wip_limit }}
+        {{ $t("board.wipExceeded", { current: column.tasks.length, limit: column.wip_limit }) }}
       </p>
     </header>
 
     <div class="board-column-body">
       <p v-if="board.filtersActive" class="column-hint">
-        Сбросьте фильтры для перетаскивания
+        {{ $t("board.dragDisabledByFilters") }}
       </p>
 
       <draggable
@@ -96,7 +96,7 @@ async function onDragChange(event: DragChangeEvent) {
       </draggable>
 
       <p v-if="visibleCount === 0 && !board.filtersActive" class="column-empty">
-        Перетащите задачу сюда
+        {{ $t("board.dropTaskHere") }}
       </p>
     </div>
   </section>

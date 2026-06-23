@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models import Q
 
+from apps.common.i18n import t
+
 
 class Board(models.Model):
     id: int
@@ -28,7 +30,7 @@ class Board(models.Model):
     def get_default(cls) -> "Board":
         board, _created = cls.objects.get_or_create(
             slug="main",
-            defaults={"name": "Главная", "is_default": True},
+            defaults={"name": t("defaults.boardName"), "is_default": True},
         )
         if not board.is_default:
             board.is_default = True

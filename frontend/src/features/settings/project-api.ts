@@ -1,6 +1,8 @@
 import { readApiError } from "@/lib/api-error";
+import { t } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
+export type AppLocale = "en" | "ru";
 export type TelegramRecipientKind = "user" | "group";
 
 export interface TelegramRecipient {
@@ -10,6 +12,9 @@ export interface TelegramRecipient {
 }
 
 export interface NotificationSettingsForm {
+  language: AppLocale;
+  timezone: string;
+  json_inbox_enabled: boolean;
   telegram_enabled: boolean;
   telegram_bot_token_set: boolean;
   telegram_bot_username: string;
@@ -32,6 +37,9 @@ export interface TelegramBotCheckResult {
 }
 
 export interface NotificationSettingsUpdate {
+  language?: AppLocale;
+  timezone?: string;
+  json_inbox_enabled?: boolean;
   telegram_enabled?: boolean;
   telegram_bot_token?: string;
   telegram_bot_username?: string;
@@ -44,6 +52,9 @@ export interface NotificationSettingsUpdate {
 }
 
 const DEFAULT_SETTINGS: NotificationSettingsForm = {
+  language: "en",
+  timezone: "Europe/Moscow",
+  json_inbox_enabled: true,
   telegram_enabled: false,
   telegram_bot_token_set: false,
   telegram_bot_username: "",
@@ -75,6 +86,10 @@ function normalizeRecipient(raw: unknown): TelegramRecipient | null {
   };
 }
 
+export function normalizeAppLocale(value: unknown): AppLocale {
+  return value === "ru" ? "ru" : "en";
+}
+
 export function isNotificationSettingsApiSupported(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") {
     return false;
@@ -95,6 +110,9 @@ export function normalizeNotificationSettings(raw: unknown): NotificationSetting
     .filter((item): item is TelegramRecipient => item !== null);
 
   return {
+    language: normalizeAppLocale(data.language),
+    timezone: String(data.timezone ?? DEFAULT_SETTINGS.timezone),
+    json_inbox_enabled: data.json_inbox_enabled !== false,
     telegram_enabled: Boolean(data.telegram_enabled),
     telegram_bot_token_set: Boolean(data.telegram_bot_token_set),
     telegram_bot_username: String(data.telegram_bot_username ?? ""),
@@ -135,7 +153,7 @@ export function commitDraftRecipient(
   }
 
   if (form.telegram_recipients.some((item) => item.chat_id === chatId)) {
-    return { form, draft, error: "Такой chat ID уже добавлен" };
+    return { form, draft, error: t("settings.duplicateChatId") };
   }
 
   const next = cloneForm(form);
@@ -173,11 +191,9 @@ async function parseJson<T>(response: Response, fallback: string): Promise<T> {
 
 export async function fetchNotificationSettings(): Promise<NotificationSettingsForm> {
   const response = await apiFetch("/api/v1/settings/");
-  const raw = await parseJson<unknown>(response, "Не удалось загрузить настройки");
+  const raw = await parseJson<unknown>(response, t("errors.loadSettings"));
   if (!isNotificationSettingsApiSupported(raw)) {
-    throw new Error(
-      "Backend не обновлён — перезапустите сервер (docker compose restart backend)",
-    );
+    throw new Error(t("errors.backendOutdated"));
   }
   return cloneForm(normalizeNotificationSettings(raw));
 }
@@ -188,7 +204,7 @@ export async function checkTelegramBot(token?: string): Promise<TelegramBotCheck
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson<TelegramBotCheckResult>(response, "Не удалось проверить бота");
+  return parseJson<TelegramBotCheckResult>(response, t("errors.checkBot"));
 }
 
 export function applyTelegramBotCheck(
@@ -212,24 +228,30 @@ export async function saveNotificationSettings(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  const raw = await parseJson<unknown>(response, "Не удалось сохранить настройки");
+  const raw = await parseJson<unknown>(response, t("errors.saveSettings"));
   if (!isNotificationSettingsApiSupported(raw)) {
-    throw new Error(
-      "Данные Telegram не сохранились — backend не обновлён. Перезапустите: docker compose restart backend",
-    );
+    throw new Error(t("errors.telegramNotSaved"));
   }
   const saved = cloneForm(normalizeNotificationSettings(raw));
   if (payload.telegram_bot_token?.trim() && !saved.telegram_bot_token_set) {
-    throw new Error("Токен бота не сохранился — проверьте backend");
+    throw new Error(t("errors.tokenNotSaved"));
   }
   if (
     payload.telegram_recipients &&
     payload.telegram_recipients.length > 0 &&
     saved.telegram_recipients.length === 0
   ) {
-    throw new Error("Получатели не сохранились — проверьте backend");
+    throw new Error(t("errors.recipientsNotSaved"));
   }
   return saved;
+}
+
+export async function fetchProjectSettings(): Promise<NotificationSettingsForm> {
+  return fetchNotificationSettings();
+}
+
+export async function saveProjectLanguage(language: AppLocale): Promise<NotificationSettingsForm> {
+  return saveNotificationSettings({ language });
 }
 
 export function cloneNotificationSettings(
@@ -240,6 +262,9 @@ export function cloneNotificationSettings(
 
 export function snapshotNotificationSettings(form: NotificationSettingsForm): string {
   return JSON.stringify({
+    language: form.language,
+    timezone: form.timezone,
+    json_inbox_enabled: form.json_inbox_enabled,
     telegram_enabled: form.telegram_enabled,
     telegram_bot_username: form.telegram_bot_username.trim(),
     telegram_recipients: form.telegram_recipients,

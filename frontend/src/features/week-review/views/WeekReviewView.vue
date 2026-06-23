@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import {
   ArrowPathIcon,
@@ -15,16 +16,17 @@ import {
 } from "@/features/week-review/api";
 import type { WeekReviewResponse } from "@/features/week-review/types";
 import { weekLabel } from "@/lib/week";
-import { pluralRu } from "@/lib/plural";
+import { useToastStore } from "@/stores/toast";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
+const toast = useToastStore();
 
 const loading = ref(true);
 const saving = ref(false);
 const closing = ref(false);
 const error = ref("");
-const notice = ref("");
 const review = ref<WeekReviewResponse | null>(null);
 const notes = ref("");
 const savedNotes = ref("");
@@ -51,15 +53,15 @@ const statsLine = computed(() => {
   }
   const { stats } = review.value;
   return [
-    pluralRu(stats.tasks_total, "задача", "задачи", "задач"),
-    `${stats.tasks_closed} закрыто`,
-    `${stats.tasks_open} открыто`,
+    t("board.taskCount", stats.tasks_total),
+    t("weekReview.statsClosed", stats.tasks_closed),
+    t("weekReview.statsOpen", stats.tasks_open),
   ].join(" · ");
 });
 
 async function loadReview() {
   if (!Number.isFinite(weekId.value) || weekId.value <= 0) {
-    error.value = "Некорректная неделя";
+    error.value = t("weekReview.invalidWeek");
     review.value = null;
     loading.value = false;
     return;
@@ -75,7 +77,7 @@ async function loadReview() {
   } catch (loadError) {
     review.value = null;
     error.value =
-      loadError instanceof Error ? loadError.message : "Не удалось загрузить обзор";
+      loadError instanceof Error ? loadError.message : t("weekReview.loadFailed");
   } finally {
     loading.value = false;
   }
@@ -88,7 +90,6 @@ async function saveNotes() {
 
   saving.value = true;
   error.value = "";
-  notice.value = "";
   try {
     const updatedWeek = await saveWeekReviewNotes(weekId.value, notes.value);
     savedNotes.value = notes.value;
@@ -96,10 +97,10 @@ async function saveNotes() {
       ...review.value,
       week: { ...review.value.week, ...updatedWeek },
     };
-    notice.value = "Сохранено";
+    toast.success(t("common.saved"));
   } catch (saveError) {
     error.value =
-      saveError instanceof Error ? saveError.message : "Не удалось сохранить";
+      saveError instanceof Error ? saveError.message : t("weekReview.saveFailed");
   } finally {
     saving.value = false;
   }
@@ -110,11 +111,18 @@ async function closeWeekAction() {
     return;
   }
 
+  if (isDirty.value) {
+    await saveNotes();
+    if (error.value) {
+      return;
+    }
+  }
+
   const openCount = review.value.stats.tasks_open;
   const confirmed = window.confirm(
     openCount > 0
-      ? `Закрыть неделю и перенести ${openCount} незакрытых задач на следующую?`
-      : "Закрыть неделю?",
+      ? t("weekReview.confirmCloseWithOpen", openCount)
+      : t("weekReview.confirmClose"),
   );
   if (!confirmed) {
     return;
@@ -122,7 +130,6 @@ async function closeWeekAction() {
 
   closing.value = true;
   error.value = "";
-  notice.value = "";
   try {
     const result = await closeWeek(weekId.value, true);
     review.value = {
@@ -134,13 +141,14 @@ async function closeWeekAction() {
       },
       open_tasks: [],
     };
-    notice.value =
+    toast.success(
       result.result.carried_over > 0
-        ? `Неделя закрыта, перенесено ${result.result.carried_over}`
-        : "Неделя закрыта";
+        ? t("weekReview.weekClosedCarryover", { count: result.result.carried_over })
+        : t("weekReview.weekClosed"),
+    );
   } catch (closeError) {
     error.value =
-      closeError instanceof Error ? closeError.message : "Не удалось закрыть неделю";
+      closeError instanceof Error ? closeError.message : t("weekReview.closeFailed");
   } finally {
     closing.value = false;
   }
@@ -153,14 +161,6 @@ watch(
   },
 );
 
-watch(notice, (value) => {
-  if (value) {
-    window.setTimeout(() => {
-      notice.value = "";
-    }, 2500);
-  }
-});
-
 onMounted(loadReview);
 </script>
 
@@ -169,13 +169,13 @@ onMounted(loadReview);
     <div class="board-shell settings-board-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
-          <h1 class="page-title">Обзор недели</h1>
+          <h1 class="page-title">{{ $t("weekReview.title") }}</h1>
           <p class="page-meta">{{ headerMeta }}</p>
         </div>
 
         <div class="board-toolbar-actions">
           <button class="btn-ghost px-4 py-2 text-sm" type="button" @click="router.push('/board')">
-            На доску
+            {{ $t("weekReview.backToBoard") }}
           </button>
           <button
             v-if="isDirty"
@@ -184,18 +184,17 @@ onMounted(loadReview);
             :disabled="saving"
             @click="saveNotes"
           >
-            {{ saving ? "Сохранение…" : "Сохранить" }}
+            {{ saving ? $t("common.saving") : $t("common.save") }}
           </button>
         </div>
       </header>
 
       <p v-if="error" class="alert-error mx-4 mt-3 shrink-0">{{ error }}</p>
-      <p v-else-if="notice" class="alert-notice mx-4 mt-3 shrink-0">{{ notice }}</p>
 
       <div v-if="loading" class="settings-body settings-body-center">
         <div class="loading-state">
           <span class="loading-spinner" aria-hidden="true" />
-          <p class="text-sm text-[var(--color-text-secondary)]">Загрузка…</p>
+          <p class="text-sm text-[var(--color-text-secondary)]">{{ $t("common.loading") }}</p>
         </div>
       </div>
 
@@ -204,16 +203,16 @@ onMounted(loadReview);
           <div class="review-stat-card">
             <CalendarDaysIcon />
             <div>
-              <p class="review-stat-label">Неделя</p>
+              <p class="review-stat-label">{{ $t("weekReview.week") }}</p>
               <p class="review-stat-value">{{ statsLine }}</p>
             </div>
           </div>
           <div class="review-stat-card">
             <CheckCircleIcon />
             <div>
-              <p class="review-stat-label">Статус</p>
+              <p class="review-stat-label">{{ $t("weekReview.status") }}</p>
               <p class="review-stat-value">
-                {{ isClosed ? "Закрыта" : "Открыта" }}
+                {{ isClosed ? $t("weekReview.closed") : $t("weekReview.open") }}
               </p>
             </div>
           </div>
@@ -226,8 +225,8 @@ onMounted(loadReview);
                 <ClipboardDocumentIcon />
               </span>
               <div>
-                <p class="drawer-eyebrow">Заметки</p>
-                <h2 class="settings-panel-title">Итоги недели</h2>
+                <p class="drawer-eyebrow">{{ $t("weekReview.notes") }}</p>
+                <h2 class="settings-panel-title">{{ $t("weekReview.notesTitle") }}</h2>
               </div>
             </div>
           </header>
@@ -236,14 +235,14 @@ onMounted(loadReview);
               v-model="notes"
               class="field px-3 py-2 review-notes"
               rows="8"
-              placeholder="Что получилось, что осталось, выводы…"
+              :placeholder="$t('weekReview.notesPlaceholder')"
             />
           </div>
         </section>
 
         <section class="settings-panel review-panel">
           <header class="settings-panel-header">
-            <h2 class="settings-panel-title">Незакрытые задачи</h2>
+            <h2 class="settings-panel-title">{{ $t("weekReview.openTasks") }}</h2>
           </header>
           <div class="settings-panel-body">
             <ul v-if="review.open_tasks.length" class="review-open-list">
@@ -252,7 +251,7 @@ onMounted(loadReview);
                 <span class="review-open-meta">{{ task.column_name }}</span>
               </li>
             </ul>
-            <p v-else class="notify-field-hint">Все задачи недели закрыты</p>
+            <p v-else class="notify-field-hint">{{ $t("weekReview.noOpenTasks") }}</p>
           </div>
         </section>
 
@@ -264,7 +263,7 @@ onMounted(loadReview);
             @click="loadReview"
           >
             <ArrowPathIcon class="icon-sm" />
-            Обновить
+            {{ $t("weekReview.refresh") }}
           </button>
           <button
             class="btn btn-primary"
@@ -272,7 +271,7 @@ onMounted(loadReview);
             :disabled="closing || isClosed"
             @click="closeWeekAction"
           >
-            {{ closing ? "Закрытие…" : isClosed ? "Неделя закрыта" : "Закрыть неделю" }}
+            {{ closing ? $t("weekReview.closing") : isClosed ? $t("weekReview.weekClosed") : $t("weekReview.closeWeek") }}
           </button>
         </div>
       </div>

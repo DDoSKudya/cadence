@@ -7,6 +7,7 @@ class JobType(models.TextChoices):
     NOTIFICATION_SCAN = "notification_scan", "Notification scan"
     TELEGRAM_SEND = "telegram_send", "Telegram send"
     TELEGRAM_CALLBACK = "telegram_callback", "Telegram callback"
+    ANALYTICS_EXPORT = "analytics_export", "Analytics export"
 
 
 class JobStatus(models.TextChoices):

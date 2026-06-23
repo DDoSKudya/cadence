@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { ArrowRightEndOnRectangleIcon, Squares2X2Icon } from "@heroicons/vue/24/outline";
 
@@ -7,6 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
 const auth = useAuthStore();
+const { t } = useI18n();
 
 const username = ref("");
 const password = ref("");
@@ -21,7 +23,7 @@ async function submit() {
     await auth.login(username.value, password.value);
     await router.push("/");
   } catch {
-    error.value = "Неверный логин или пароль";
+    error.value = t("auth.invalid");
   } finally {
     isSubmitting.value = false;
   }
@@ -38,17 +40,17 @@ async function submit() {
           </span>
           <div>
             <div class="sidebar-title">Cadence</div>
-            <div class="sidebar-subtitle">Недельный ритм</div>
+            <div class="sidebar-subtitle">{{ $t("common.appSubtitle") }}</div>
           </div>
         </div>
-        <h1 class="text-xl font-semibold text-[var(--color-text)]">Вход</h1>
+        <h1 class="text-xl font-semibold text-[var(--color-text)]">{{ $t("auth.title") }}</h1>
         <p class="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Личная канбан-доска для недельного ритма.
+          {{ $t("auth.subtitle") }}
         </p>
       </div>
 
       <label class="block text-sm text-[var(--color-text-secondary)]">
-        Логин
+        {{ $t("auth.username") }}
         <input
           v-model="username"
           class="field mt-1.5 px-3 py-2"
@@ -59,7 +61,7 @@ async function submit() {
       </label>
 
       <label class="mt-3 block text-sm text-[var(--color-text-secondary)]">
-        Пароль
+        {{ $t("auth.password") }}
         <input
           v-model="password"
           class="field mt-1.5 px-3 py-2"
@@ -79,7 +81,7 @@ async function submit() {
         type="submit"
       >
         <ArrowRightEndOnRectangleIcon class="icon-sm" />
-        Войти
+        {{ isSubmitting ? $t("auth.submitting") : $t("auth.submit") }}
       </button>
     </form>
   </main>

@@ -1,44 +1,41 @@
-COMPOSE = docker compose
-COMPOSE_DEV = $(COMPOSE) --profile dev
+.DEFAULT_GOAL := help
 
-.PHONY: dev dev-reset up down logs migrate createsuperuser test-backend test-frontend verify worker beat
+COMPOSE := docker compose
+COMPOSE_DEV := $(COMPOSE) --profile dev
+COMPOSE_PROD := $(COMPOSE) --profile prod
+COMPOSE_ALL := $(COMPOSE) --profile dev --profile prod
 
-dev:
-	$(COMPOSE_DEV) up --build --remove-orphans
+.PHONY: help up dev down test lint lint-install
 
-dev-reset:
-	$(COMPOSE_DEV) down --remove-orphans
-	-docker rm -f $$(docker ps -aq --filter "name=cadence-") 2>/dev/null
-	docker network prune -f
-	$(COMPOSE_DEV) up --build
+help:
+	@echo "Cadence — available commands:"
+	@echo ""
+	@echo "  make up           Start production stack (detached)"
+	@echo "  make dev          Start development stack (foreground, logs)"
+	@echo "  make down         Stop all services"
+	@echo "  make test         Run full test suite (lint, typecheck, tests, build)"
+	@echo "  make lint         Run pre-commit on all files"
+	@echo "  make lint-install Install pre-commit and pre-push hooks"
+	@echo "  make help         Show this help"
 
 up:
-	$(COMPOSE) up -d --build --remove-orphans
+	DJANGO_SETTINGS_MODULE=cadence.settings.prod DJANGO_DEBUG=false GUNICORN_EXTRA_ARGS="--workers 2" \
+		$(COMPOSE_PROD) up -d --build
+
+dev:
+	DJANGO_SETTINGS_MODULE=cadence.settings.dev DJANGO_DEBUG=true GUNICORN_EXTRA_ARGS="--reload" \
+		$(COMPOSE_DEV) up --build
 
 down:
-	$(COMPOSE) down
+	$(COMPOSE_ALL) down
 
-logs:
-	$(COMPOSE) logs -f
-
-migrate:
-	$(COMPOSE) run --rm backend uv run python manage.py migrate
-
-createsuperuser:
-	$(COMPOSE) run --rm backend uv run python manage.py createsuperuser
-
-test-backend:
-	cd backend && uv run pytest
-
-test-frontend:
-	cd frontend && npm run typecheck && npm run test -- --run
-
-verify:
-	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy . && uv run pytest
+test:
+	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy . && DJANGO_SETTINGS_MODULE=cadence.settings.test uv run python manage.py makemigrations --check --dry-run && uv run pytest
 	cd frontend && npm run typecheck && npm run test -- --run && npm run build
 
-worker:
-	cd backend && uv run celery -A cadence worker -l info
+lint:
+	uv tool run pre-commit run --all-files --show-diff-on-failure
 
-beat:
-	cd backend && uv run celery -A cadence beat -l info
+lint-install:
+	uv tool run pre-commit install
+	uv tool run pre-commit install --hook-type pre-push

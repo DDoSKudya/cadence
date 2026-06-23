@@ -1,51 +1,38 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/vue/24/outline";
 
-import { getCurrentWeekKey, weekLabel } from "@/lib/week";
 import { useBoardStore } from "@/features/board/stores/board";
 
 const board = useBoardStore();
+const now = ref(new Date());
+let clockTimer: number | undefined;
 
-const label = computed(() => weekLabel(board.weekKey));
-const isCurrentWeek = computed(() => board.weekKey === getCurrentWeekKey());
 const reviewLink = computed(() =>
   board.weekId ? { name: "week-review", params: { id: board.weekId } } : null,
 );
+const showReviewLink = computed(() => {
+  const day = now.value.getDay();
+  const hour = now.value.getHours();
+
+  return (day === 5 && hour >= 12) || day === 6 || day === 0;
+});
+
+onMounted(() => {
+  clockTimer = window.setInterval(() => {
+    now.value = new Date();
+  }, 60000);
+});
+
+onUnmounted(() => {
+  window.clearInterval(clockTimer);
+});
 </script>
 
 <template>
-  <div class="week-nav">
-    <div class="week-switcher" role="group" aria-label="Неделя">
-      <button
-        class="week-switcher-btn"
-        type="button"
-        aria-label="Предыдущая неделя"
-        @click="board.shiftWeek(-1)"
-      >
-        <ChevronLeftIcon class="icon-sm" />
-      </button>
-      <span class="week-label">{{ label }}</span>
-      <button
-        class="week-switcher-btn"
-        type="button"
-        aria-label="Следующая неделя"
-        @click="board.shiftWeek(1)"
-      >
-        <ChevronRightIcon class="icon-sm" />
-      </button>
-    </div>
-    <RouterLink v-if="reviewLink" class="week-nav-review" :to="reviewLink">
-      Обзор
+  <div v-if="showReviewLink && reviewLink" class="week-nav">
+    <RouterLink class="week-nav-review" :to="reviewLink">
+      {{ $t("board.review") }}
     </RouterLink>
-    <button
-      class="week-nav-reset"
-      type="button"
-      :disabled="isCurrentWeek"
-      @click="board.goToCurrentWeek()"
-    >
-      Сейчас
-    </button>
   </div>
 </template>
