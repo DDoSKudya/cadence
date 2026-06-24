@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from apps.boards.models import BoardColumn, SystemType
+from apps.boards.models import BoardColumn, SystemType, TaskStatus
 from apps.jobs.models import JobType
 from apps.jobs.services import JobService
 from apps.notifications.models import (
@@ -12,7 +12,12 @@ from apps.notifications.models import (
 )
 from apps.tasks.events import EventActor, record_task_event
 from apps.tasks.models import ActorType, Task, TaskEventType, TaskSource
-from apps.tasks.services import TaskCloseService, TaskCreationService, TaskMoveService
+from apps.tasks.services import (
+    TaskCloseService,
+    TaskCreationService,
+    TaskMoveService,
+    TaskStatusChangeService,
+)
 
 
 class TelegramActionError(Exception):
@@ -118,16 +123,43 @@ class TelegramActionService:
         if task.archived_at is not None:
             return {"status": "already_closed"}
 
-        column = BoardColumn.objects.filter(
+        process_status = TaskStatus.objects.filter(
             board=task.board,
-            system_type=SystemType.IN_PROGRESS,
-            is_active=True,
+            slug="process",
         ).first()
-        if column is not None and task.column_id != column.id:
-            TaskMoveService.move_with_actor(
+        if process_status is None:
+            column = BoardColumn.objects.filter(
+                board=task.board,
+                system_type=SystemType.IN_PROGRESS,
+                is_active=True,
+            ).first()
+            if column is not None and task.column_id != column.id:
+                TaskMoveService.move_with_actor(
+                    task,
+                    target_column=column,
+                    target_position=TaskCreationService._next_position(column),
+                    actor=actor,
+                )
+        else:
+            source_status = task.task_status
+            if source_status is not None and source_status.slug == "open":
+                ready_status = TaskStatus.objects.filter(
+                    board=task.board,
+                    slug="ready_on_develop",
+                ).first()
+                if ready_status is not None:
+                    if not task.description.strip():
+                        task.description = "—"
+                        task.save(update_fields=["description", "updated_at"])
+                    TaskStatusChangeService.apply(
+                        task,
+                        target_status_id=ready_status.id,
+                        actor=actor,
+                    )
+                    task.refresh_from_db()
+            TaskStatusChangeService.apply(
                 task,
-                target_column=column,
-                target_position=TaskCreationService._next_position(column),
+                target_status_id=process_status.id,
                 actor=actor,
             )
 

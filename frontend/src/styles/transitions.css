@@ -25,19 +25,6 @@
   opacity: 0;
 }
 
-.settings-workspace-enter-active {
-  transition: opacity var(--motion-slow) var(--ease-emphasis);
-}
-
-.settings-workspace-leave-active {
-  transition: opacity var(--motion-fast) var(--ease-soft);
-}
-
-.settings-workspace-enter-from,
-.settings-workspace-leave-to {
-  opacity: 0;
-}
-
 .slide-panel-enter-active,
 .slide-panel-leave-active {
   transition: opacity var(--motion-medium) var(--ease-soft);

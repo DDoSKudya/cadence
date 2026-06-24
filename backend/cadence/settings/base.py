@@ -161,6 +161,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.scan_reminders",
         "schedule": crontab(minute="*/5"),
     },
+    "process-week-rollover": {
+        "task": "apps.weeks.tasks.process_week_rollover",
+        "schedule": crontab(hour=0, minute=5),
+    },
 }
 
 TELEGRAM_ENABLED = env("TELEGRAM_ENABLED")

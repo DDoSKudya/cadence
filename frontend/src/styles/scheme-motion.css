@@ -1,0 +1,158 @@
+/* Board scheme — unified motion (2026) */
+
+:root {
+  --scheme-stagger-step: 40ms;
+  --scheme-stagger-max: 480ms;
+}
+
+.columns-shell {
+  animation: scheme-rise-in var(--motion-slow) var(--ease-emphasis) both;
+}
+
+@keyframes scheme-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.375rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scheme-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.scheme-stagger-item {
+  animation: scheme-rise-in var(--motion-medium) var(--ease-emphasis) both;
+  animation-delay: min(var(--scheme-item-delay, 0ms), var(--scheme-stagger-max));
+}
+
+.status-flow-workspace {
+  animation: scheme-scale-in var(--motion-slow) var(--ease-emphasis) both;
+  animation-delay: 60ms;
+}
+
+/* Main tab content */
+.scheme-tab-swap-enter-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.scheme-tab-swap-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.scheme-tab-swap-enter-from {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+
+.scheme-tab-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-0.25rem);
+}
+
+/* Inline alerts */
+.scheme-alert-slide-enter-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.scheme-alert-slide-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.scheme-alert-slide-enter-from,
+.scheme-alert-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-0.35rem);
+}
+
+/* Expandable blocks (scheme create, etc.) */
+.scheme-collapse-enter-active {
+  overflow: hidden;
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis),
+    max-height var(--motion-slow) var(--ease-emphasis);
+  max-height: 28rem;
+}
+
+.scheme-collapse-leave-active {
+  overflow: hidden;
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    max-height var(--motion-medium) var(--ease-soft);
+  max-height: 28rem;
+}
+
+.scheme-collapse-enter-from,
+.scheme-collapse-leave-to {
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  max-height: 0;
+}
+
+/* Loading / error / content swap */
+.scheme-body-swap-enter-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.scheme-body-swap-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.scheme-body-swap-enter-from {
+  opacity: 0;
+  transform: translateY(0.35rem);
+}
+
+.scheme-body-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-0.2rem);
+}
+
+/* Status inspector panel */
+.scheme-inspector-swap-enter-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.scheme-inspector-swap-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.scheme-inspector-swap-enter-from {
+  opacity: 0;
+  transform: translateX(0.4rem);
+}
+
+.scheme-inspector-swap-leave-to {
+  opacity: 0;
+  transform: translateX(-0.25rem);
+}

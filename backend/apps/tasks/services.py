@@ -9,9 +9,10 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 
-from apps.boards.models import Board, BoardColumn, SystemType
-from apps.boards.services import ColumnSettingsService
-from apps.core.models import Tag
+from apps.boards.models import Board, BoardColumn, SystemType, TaskStatus
+from apps.boards.services import ColumnSettingsService, ColumnWorkflowService
+from apps.boards.task_status_services import TaskStatusService
+from apps.core.tag_services import TagService
 from apps.notifications.scheduling import schedule_next_reminder
 from apps.tasks.events import (
     EventActor,
@@ -70,6 +71,8 @@ class TaskUpdateInput:
     reminder_interval_minutes: int | None = None
     clear_reminder_interval: bool = False
     tag_slugs: list[str] | None = None
+    task_status_id: int | None = None
+    task_status_provided: bool = False
 
 
 class TaskCreationService:
@@ -81,11 +84,22 @@ class TaskCreationService:
 
         position = TaskCreationService._next_position(data.column)
         now = timezone.now()
+        initial_status = TaskStatusService.get_initial_status(data.board)
+        target_column = data.column
+        if initial_status is not None:
+            task_status: TaskStatus | None = initial_status
+            status_column = initial_status.column
+            if status_column is not None and status_column.is_active:
+                target_column = status_column
+            position = TaskCreationService._next_position(target_column)
+        else:
+            task_status = TaskStatusService.resolve_column_status(data.column)
         task = Task.objects.create(
             title=data.title.strip(),
             description=data.description,
             board=data.board,
-            column=data.column,
+            column=target_column,
+            task_status=task_status,
             week=data.week,
             position=position,
             priority=data.priority,
@@ -105,7 +119,8 @@ class TaskCreationService:
             TaskEventType.CREATED,
             actor=data.actor,
             payload={
-                "column_id": data.column.id,
+                "column_id": target_column.id,
+                "task_status_id": task_status.id if task_status else None,
                 "week_id": data.week.id if data.week else None,
             },
         )
@@ -122,14 +137,11 @@ class TaskCreationService:
     @staticmethod
     def _set_tags(task: Task, tag_slugs: list[str]) -> None:
         if not tag_slugs:
+            task.tags.clear()
             return
 
-        tags = list(Tag.objects.filter(slug__in=tag_slugs, is_active=True))
-        found_slugs = {tag.slug for tag in tags}
-        missing = [slug for slug in tag_slugs if slug not in found_slugs]
-        if missing:
-            raise ValidationError(f"Unknown tags: {', '.join(missing)}")
-
+        board = task.column.board
+        tags = TagService.resolve_slugs_for_board(board=board, tag_slugs=tag_slugs)
         task.tags.set(tags)
 
 
@@ -155,8 +167,23 @@ class TaskUpdateService:
         if data.tag_slugs is not None:
             TaskCreationService._set_tags(task, data.tag_slugs)
 
+        status_changed = False
+        if data.task_status_provided:
+            actor = resolve_request_context(data.request)
+            task = TaskStatusChangeService.apply(
+                task,
+                target_status_id=data.task_status_id,
+                actor=actor,
+            )
+            status_changed = True
+
+        if data.tag_slugs is not None:
+            TaskCreationService._set_tags(task, data.tag_slugs)
+
         if fields or data.tag_slugs is not None:
             record_request_event(task, TaskEventType.UPDATED, data.request)
+        elif not status_changed and data.task_status_provided:
+            pass
 
         return task
 
@@ -215,6 +242,94 @@ class TaskUpdateService:
             fields.append("reminder_interval_minutes")
 
 
+class TaskStatusChangeService:
+    @staticmethod
+    @transaction.atomic
+    def apply(
+        task: Task,
+        *,
+        target_status_id: int | None,
+        actor: EventActor,
+    ) -> Task:
+        if task.archived_at is not None:
+            raise ValidationError("Archived task cannot be updated.")
+
+        if target_status_id is None:
+            raise ValidationError("Task status is invalid.")
+
+        target_status = (
+            TaskStatus.objects.filter(board_id=task.board_id, id=target_status_id)
+            .select_related("column")
+            .first()
+        )
+        if target_status is None:
+            raise ValidationError("Task status is invalid.")
+
+        source_status = task.task_status
+        if source_status is None:
+            source_status = TaskStatusService.resolve_column_status(task.column)
+
+        if source_status is not None and source_status.id == target_status.id:
+            return task
+
+        TaskStatusService.validate_status_change(
+            task=task,
+            from_status=source_status,
+            to_status=target_status,
+        )
+
+        source_column = task.column
+        if target_status.column_id and target_status.column_id != task.column_id:
+            target_column = target_status.column
+            if target_column is None or not target_column.is_active:
+                raise ValidationError("Target column is invalid.")
+            if not ColumnWorkflowService.is_move_allowed(
+                board=task.board,
+                from_column_id=source_column.id,
+                to_column_id=target_column.id,
+            ):
+                raise ValidationError(
+                    "Transition from this column is not allowed.",
+                    code="transition_not_allowed",
+                )
+            target_position = TaskCreationService._next_position(target_column)
+            TaskMoveService._move_between_columns(
+                task,
+                source_column=source_column,
+                target_column=target_column,
+                target_position=target_position,
+                target_status=target_status,
+            )
+            record_task_event(
+                task,
+                TaskEventType.MOVED,
+                actor=actor,
+                payload={
+                    "from_column_id": source_column.id,
+                    "to_column_id": task.column_id,
+                    "from_system_type": source_column.system_type,
+                    "to_system_type": task.column.system_type,
+                    "from_task_status_id": source_status.id if source_status else None,
+                    "to_task_status_id": task.task_status_id,
+                    "position": task.position,
+                },
+            )
+        else:
+            task.task_status = target_status
+            task.save(update_fields=["task_status_id", "updated_at"])
+
+        record_task_event(
+            task,
+            TaskEventType.UPDATED,
+            actor=actor,
+            payload={
+                "from_task_status_id": source_status.id if source_status else None,
+                "to_task_status_id": task.task_status_id,
+            },
+        )
+        return task
+
+
 class TaskMoveService:
     @staticmethod
     @transaction.atomic
@@ -251,14 +366,59 @@ class TaskMoveService:
             raise ValidationError("Target position must be non-negative.")
 
         source_column = task.column
+        source_status = task.task_status
+        target_status = None
+        effective_target_column = target_column
+
+        if source_status and source_status.is_terminal:
+            raise ValidationError(
+                "Task in a terminal status cannot be moved.",
+                code="status_terminal",
+            )
+
         if source_column.id == target_column.id:
             TaskMoveService._reorder_within_column(task, target_position)
         else:
+            if not ColumnWorkflowService.is_move_allowed(
+                board=task.board,
+                from_column_id=source_column.id,
+                to_column_id=target_column.id,
+            ):
+                raise ValidationError(
+                    "Transition from this column is not allowed.",
+                    code="transition_not_allowed",
+                )
+            if source_status is None:
+                source_status = TaskStatusService.resolve_column_status(source_column)
+
+            target_status = TaskStatusService.resolve_target_status_for_column(
+                task=task,
+                source_status=source_status,
+                target_column=target_column,
+            )
+            if target_status is None:
+                raise ValidationError(
+                    "Task status transition is not allowed.",
+                    code="status_transition_not_allowed",
+                )
+
+            TaskStatusService.validate_status_change(
+                task=task,
+                from_status=source_status,
+                to_status=target_status,
+            )
+
+            if target_status.column_id:
+                status_column = target_status.column
+                if status_column is not None:
+                    effective_target_column = status_column
+
             TaskMoveService._move_between_columns(
                 task,
                 source_column=source_column,
-                target_column=target_column,
+                target_column=effective_target_column,
                 target_position=target_position,
+                target_status=target_status,
             )
 
         record_task_event(
@@ -267,7 +427,11 @@ class TaskMoveService:
             actor=actor,
             payload={
                 "from_column_id": source_column.id,
-                "to_column_id": target_column.id,
+                "to_column_id": task.column_id,
+                "from_system_type": source_column.system_type,
+                "to_system_type": task.column.system_type,
+                "from_task_status_id": source_status.id if source_status else None,
+                "to_task_status_id": task.task_status_id,
                 "position": task.position,
             },
         )
@@ -282,12 +446,19 @@ class TaskMoveService:
         )
 
     @staticmethod
-    def _save_positions(tasks: list[Task], *, moved_task: Task | None = None) -> None:
+    def _save_positions(
+        tasks: list[Task],
+        *,
+        moved_task: Task | None = None,
+        include_task_status: bool = False,
+    ) -> None:
         for index, item in enumerate(tasks):
             item.position = index
             update_fields = ["position", "updated_at"]
             if moved_task is not None and item.pk == moved_task.pk:
                 update_fields.extend(["column_id", "column_entered_at"])
+                if include_task_status:
+                    update_fields.append("task_status_id")
             item.save(update_fields=update_fields)
 
     @staticmethod
@@ -305,6 +476,7 @@ class TaskMoveService:
         source_column: BoardColumn,
         target_column: BoardColumn,
         target_position: int,
+        target_status=None,
     ) -> None:
         source_tasks = TaskMoveService._lock_column_tasks(source_column)
         target_tasks = TaskMoveService._lock_column_tasks(target_column)
@@ -315,8 +487,14 @@ class TaskMoveService:
         target_position = min(target_position, len(target_tasks))
         task.column = target_column
         task.column_entered_at = timezone.now()
+        if target_status is not None:
+            task.task_status = target_status
         target_tasks.insert(target_position, task)
-        TaskMoveService._save_positions(target_tasks, moved_task=task)
+        TaskMoveService._save_positions(
+            target_tasks,
+            moved_task=task,
+            include_task_status=target_status is not None,
+        )
 
 
 class TaskCloseService:
@@ -353,11 +531,9 @@ class TaskCloseService:
             system_type=SystemType.DONE,
             is_active=True,
         ).first()
-        if done_column is None:
-            raise ValidationError("Done column is not configured.")
 
         from_column_id = task.column_id
-        if task.column_id != done_column.id:
+        if done_column is not None and task.column_id != done_column.id:
             TaskMoveService.move_with_actor(
                 task,
                 target_column=done_column,
@@ -455,6 +631,14 @@ class TaskReopenService:
         ).first()
         if planned is not None:
             return planned
+
+        backlog = BoardColumn.objects.filter(
+            board=task.board,
+            system_type=SystemType.BACKLOG,
+            is_active=True,
+        ).first()
+        if backlog is not None:
+            return backlog
 
         fallback = (
             BoardColumn.objects.filter(board=task.board, is_active=True)

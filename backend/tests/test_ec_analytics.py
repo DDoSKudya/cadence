@@ -10,13 +10,12 @@ from apps.analytics.models import (
     FileFormat,
 )
 from apps.analytics.services import AnalyticsExportService
-from apps.core.models import Tag
 from conftest import close_task_via_api, create_task_via_api
 
 
 @pytest.fixture
-def analytics_task_data(api_client, planned_column, week_key):
-    tag = Tag.objects.create(name="Analytics", slug="analytics")
+def analytics_task_data(api_client, planned_column, week_key, make_tag):
+    tag = make_tag("Analytics", slug="analytics")
     created = create_task_via_api(
         api_client,
         title="Analytics task",
@@ -74,8 +73,9 @@ def test_analytics_ec_breakdown_group_classes(
 @pytest.mark.django_db
 def test_analytics_ec_filters_parse_filters_payload_period_bounds_and_tag_resolution(
     current_week,
+    make_tag,
 ):
-    tag = Tag.objects.create(name="Ops", slug="ops")
+    tag = make_tag("Ops", slug="ops")
     filters = parse_filters_payload(
         {
             "week": f"{current_week.iso_year}-W{current_week.iso_week:02d}",

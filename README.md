@@ -1,72 +1,421 @@
+<div align="center">
+
+<br>
+
 # Cadence
 
-Personal weekly Kanban for learning and development work: configurable board, JSON/API intake, background jobs, Telegram reminders, archive, analytics, and CSV/XLSX exports.
+<p>
+  <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
+</p>
 
-**Version 1.0.0** — MVP complete (stages 0–10).
+<p>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-111827?style=flat-square"></a>
+  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
+  <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
+  <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-16A34A?style=flat-square"></a>
+</p>
 
-## Stack
+<p>
+  <a href="#быстрый-старт">Быстрый старт</a>
+  ·
+  <a href="#архитектура">Архитектура</a>
+  ·
+  <a href="#api">API</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+  ·
+  <a href="docs/DEVELOPERS.md">Developers</a>
+  ·
+  <a href=".github/workflows/ci.yml">CI</a>
+</p>
 
-| Layer | Technology |
-|-------|------------|
-| API | Django, DRF, PostgreSQL |
-| Jobs | Celery, Celery Beat, RabbitMQ |
-| Notifications | aiogram (optional Telegram bot) |
-| UI | Vue 3, TypeScript, Vite, Tailwind CSS |
-| Tooling | uv, npm, pytest, ruff, mypy, Vitest |
+</div>
 
-## Architecture
+---
 
-```text
-Browser ──► nginx ──► Vue SPA (dev: Vite / prod: static)
-              │
-              └──► Django API ──► PostgreSQL
-                        │
-                        └──► Celery workers ──► RabbitMQ
-```
+<table>
+  <tr>
+    <td><strong>Назначение</strong></td>
+    <td>Self-hosted Kanban вокруг недельного ритма: доска, импорт, фоновые задания, Telegram, архив и аналитика.</td>
+  </tr>
+  <tr>
+    <td><strong>Формат</strong></td>
+    <td>Модульный монолит: Django apps + Vue SPA, один <code>docker-compose.yml</code> с профилями <code>dev</code> / <code>prod</code>.</td>
+  </tr>
+  <tr>
+    <td><strong>Акцент</strong></td>
+    <td>Настраиваемый workflow (схемы досок, граф статусов), несколько каналов ввода задач, наблюдаемость фоновых job.</td>
+  </tr>
+</table>
 
-**Domain apps** (`backend/apps/`): `boards`, `tasks`, `weeks`, `imports`, `jobs`, `notifications`, `archive`, `analytics`. Shared cross-cutting pieces live in `common` (request id, Celery logging).
+## Оглавление
 
-**Intake paths:** REST API (session or API key), JSON files in `data/task-inbox/pending/` (Celery scan), Telegram callbacks.
+<table>
+  <tr>
+    <td width="33%">
+      <strong>Start</strong><br>
+      <a href="#быстрый-старт">Быстрый старт</a><br>
+      <a href="#запуск">Запуск</a><br>
+      <a href="#переменные-окружения">Переменные окружения</a><br>
+      <a href="#качество-кода">Качество кода</a>
+    </td>
+    <td width="33%">
+      <strong>System</strong><br>
+      <a href="#стек">Стек</a><br>
+      <a href="#архитектура">Архитектура</a><br>
+      <a href="#api">API</a><br>
+      <a href="#возможности">Возможности</a>
+    </td>
+    <td width="33%">
+      <strong>Ops</strong><br>
+      <a href="#данные-и-логи">Данные и логи</a><br>
+      <a href="#тесты">Тесты</a><br>
+      <a href="#деплой">Деплой</a><br>
+      <a href="#документация">Документация</a>
+    </td>
+  </tr>
+</table>
 
-**Observability:** structured console logs with `X-Request-ID`, Celery task start/end/failure logs (`cadence.celery`), Flower in dev profile (`:5556`).
+---
 
-## Bootstrap
+## Быстрый старт
 
 ```bash
 cp .env.example .env
-cd backend && uv sync --all-groups
-cd ../frontend && npm install
+make dev     # Docker: SPA + API на :8080
+make test    # ruff + mypy + pytest + vitest + build
 ```
 
-## Commands
+<table>
+  <tr>
+    <td><strong>Приложение</strong></td>
+    <td><a href="http://localhost:8080">http://localhost:8080</a></td>
+  </tr>
+  <tr>
+    <td><strong>Health</strong></td>
+    <td><a href="http://localhost:8080/api/health/">http://localhost:8080/api/health/</a></td>
+  </tr>
+  <tr>
+    <td><strong>Swagger</strong></td>
+    <td><a href="http://localhost:8080/api/docs/">http://localhost:8080/api/docs/</a></td>
+  </tr>
+  <tr>
+    <td><strong>RabbitMQ</strong></td>
+    <td><a href="http://localhost:15672">http://localhost:15672</a> (<code>cadence</code> / <code>cadence</code>)</td>
+  </tr>
+  <tr>
+    <td><strong>Flower</strong></td>
+    <td><a href="http://localhost:5556">http://localhost:5556</a> (только <code>make dev</code>)</td>
+  </tr>
+  <tr>
+    <td><strong>Vite</strong></td>
+    <td><a href="http://localhost:5173">http://localhost:5173</a> (только <code>make dev</code>)</td>
+  </tr>
+  <tr>
+    <td><strong>Admin</strong></td>
+    <td><a href="http://localhost:8080/admin/">http://localhost:8080/admin/</a></td>
+  </tr>
+</table>
+
+Первый вход — создайте суперпользователя:
 
 ```bash
-make help   # list commands
-make dev    # development: Vite, gunicorn --reload, Flower
-make up     # production: static SPA in nginx, gunicorn workers
-make down   # stop all services
-make test   # lint, typecheck, tests, frontend build
-```
-
-**Development** — open `http://localhost:8080` (nginx → Vite). API docs: `/api/docs/`. RabbitMQ UI: `:15672`. Flower: `:5556`.
-
-**Production** — set `DJANGO_DEBUG=false`, strong `DJANGO_SECRET_KEY`, and `CSRF_TRUSTED_ORIGINS` in `.env`. Static and media files are served by nginx after `collectstatic`.
-
-Django admin tasks (no make targets):
-
-```bash
-docker compose exec backend uv run python manage.py migrate
 docker compose exec backend uv run python manage.py createsuperuser
 ```
 
-## API schema
+## Запуск
 
-Live schema: `GET /api/schema/`, Swagger UI: `/api/docs/`. Exported snapshot: `docs/openapi.json`.
+**Нужно:** Docker Compose, Node 22+ (для локального фронта), Python 3.12 + [uv](https://docs.astral.sh/uv/) (для локального бэкенда).
 
-## CI
+`make help` покажет все команды: `up`, `down`, `dev`, `test`, `lint`, `lint-install`.
 
-GitHub Actions (`.github/workflows/ci.yml`): backend ruff/mypy/pytest, frontend typecheck/Vitest/build on `main` and `develop`.
+### Docker
 
-## License
+```bash
+cp .env.example .env
+make dev    # разработка: foreground, логи в терминале
+make up     # production-like: baked SPA, gunicorn workers, detached
+make down   # остановить все профили
+```
 
-MIT
+nginx слушает порт **8080**. Порт можно поменять через `NGINX_HTTP_PORT` в `.env`.
+
+### Локальная установка зависимостей
+
+Если хотите прогнать тесты или инструменты без полного стека:
+
+```bash
+cd backend && uv sync --all-groups && cd ..
+cd frontend && npm install && cd ..
+```
+
+### Переменные окружения
+
+Полный список — [`.env.example`](.env.example). Подробнее — в [docs/DEVELOPERS.md §11](docs/DEVELOPERS.md#11-настройки-и-переменные-окружения).
+
+| Переменная | Зачем |
+| ---------- | ----- |
+| `DJANGO_SECRET_KEY` | секрет Django; в production — сильное случайное значение |
+| `DJANGO_DEBUG` | `true` в dev, `false` в prod (`make up`) |
+| `DATABASE_URL` | PostgreSQL; по умолчанию `postgres://cadence:cadence@postgres:5432/cadence` |
+| `CELERY_BROKER_URL` | RabbitMQ для Celery |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ENABLED` | опциональный бот и напоминания |
+| `CADENCE_TIME_ZONE` | таймзона проекта (rollover, quiet hours), по умолчанию `Europe/Moscow` |
+| `CSRF_TRUSTED_ORIGINS` | origins SPA для CSRF, например `http://localhost:8080` |
+
+### Качество кода
+
+```bash
+make lint-install   # pre-commit + pre-push hooks
+make lint && make test
+```
+
+CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и production build. Конфиг: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+---
+
+## Стек
+
+<table>
+  <tr>
+    <td><strong>Backend</strong></td>
+    <td>Django 6, DRF, drf-spectacular, PostgreSQL 17, Celery 5, aiogram 3</td>
+  </tr>
+  <tr>
+    <td><strong>Frontend</strong></td>
+    <td>Vue 3.5, TypeScript, Vite 6, Pinia, Tailwind 4, vue-i18n</td>
+  </tr>
+  <tr>
+    <td><strong>Визуализация</strong></td>
+    <td>ECharts 6, @vue-flow (редактор графа статусов)</td>
+  </tr>
+  <tr>
+    <td><strong>Infra</strong></td>
+    <td>Docker Compose, nginx, gunicorn, RabbitMQ, Flower (dev)</td>
+  </tr>
+  <tr>
+    <td><strong>Quality</strong></td>
+    <td>uv, ruff, mypy, pytest, Vitest, pre-commit</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td><strong>Почему Django</strong><br>зрелый ORM, admin, сессии, миграции и единый контур для доменных apps.</td>
+    <td><strong>Почему Celery</strong><br>импорт inbox, напоминания, экспорт отчётов и rollover без блокировки API.</td>
+    <td><strong>Почему Vue</strong><br>интерактивная доска, drag-and-drop, настройки workflow и аналитика в одном SPA.</td>
+  </tr>
+</table>
+
+---
+
+## Возможности
+
+| Область | Что умеет |
+| ------- | --------- |
+| **Доска** | Kanban, DnD, drawer задачи, теги, приоритеты, ISO-недели |
+| **Workflow** | схемы досок, граф статусов, правила переходов колонок |
+| **Ввод** | UI, REST API (API key), JSON inbox, Telegram callbacks |
+| **Фон** | Celery jobs с retry/cancel, Flower, service logs |
+| **Обзор** | архив, week review, аналитика, экспорт CSV/XLSX |
+| **i18n** | интерфейс RU / EN |
+
+Подробные потоки данных — в [docs/DEVELOPERS.md §6](docs/DEVELOPERS.md#6-потоки-данных).
+
+---
+
+## Архитектура
+
+Проект — модульный монолит: доменные Django apps + Vue feature-модули.
+
+| App | Назначение |
+| --- | ---------- |
+| `boards` | доска, схемы, колонки, граф статусов |
+| `tasks` | CRUD, move, close, события |
+| `weeks` | ISO-недели, review, rollover |
+| `imports` | JSON inbox с идемпотентностью |
+| `jobs` | учёт фоновых заданий |
+| `notifications` | Telegram-напоминания и callbacks |
+| `analytics` | дашборды и экспорт |
+| `archive` | read-only архив задач |
+| `core` | auth, settings, tags, platform |
+
+```text
+cadence/
+├── backend/apps/    boards · tasks · weeks · imports · jobs · …
+├── frontend/src/    Vue SPA (features/)
+├── infra/nginx/     reverse proxy
+├── data/task-inbox/ JSON import pipeline
+├── docs/            DEVELOPERS.md, openapi.json
+└── logs/            service logs
+```
+
+### Общая схема
+
+```mermaid
+flowchart TB
+    subgraph client["Клиент"]
+        Browser["Браузер / API key"]
+        Inbox["JSON inbox"]
+        TG["Telegram"]
+    end
+
+    subgraph edge["Край"]
+        Nginx["nginx :8080"]
+    end
+
+    subgraph app["Приложение"]
+        SPA["Vue SPA"]
+        API["Django API"]
+        Bot["telegram-bot"]
+    end
+
+    subgraph data["Данные"]
+        PG[("PostgreSQL")]
+        MQ["RabbitMQ"]
+        Worker["Celery"]
+    end
+
+    Browser --> Nginx --> SPA
+    Nginx --> API
+    API --> PG
+    API --> MQ
+    MQ --> Worker --> PG
+    Inbox --> Worker
+    TG --> Bot --> API
+```
+
+### Поток задачи (создание через API)
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant API as Django API
+  participant Task as TaskCreationService
+  participant DB as PostgreSQL
+  participant Celery
+
+  Client->>API: POST /api/v1/tasks/ (session или Api-Key)
+  API->>Task: create(board, column, week, tags)
+  Task->>DB: Task + TaskEvent
+  Task->>Celery: schedule_next_reminder (если включено)
+  API-->>Client: 201 + task JSON
+```
+
+nginx маршрутизирует `/` во frontend, `/api/` и `/admin/` в backend.
+
+---
+
+## API
+
+База: `/api/v1/` через nginx (`http://localhost:8080/api/v1/…`).
+
+| Метод | Путь | Описание |
+| ----- | ---- | -------- |
+| `GET` | `/api/health/` | health check |
+| `POST` | `/api/v1/auth/login/` | вход (session) |
+| `GET` | `/api/v1/board/` | payload доски |
+| `GET\|POST` | `/api/v1/tasks/` | список / создание |
+| `POST` | `/api/v1/tasks/<id>/move/` | перемещение |
+| `POST` | `/api/v1/tasks/<id>/close/` | закрытие / архив |
+| `POST` | `/api/v1/imports/upload/` | загрузка JSON |
+| `GET` | `/api/v1/jobs/` | фоновые задания |
+| `GET` | `/api/v1/analytics/summary/` | сводка аналитики |
+| `GET\|POST` | `/api/v1/analytics/exports/` | экспорт CSV/XLSX |
+
+Документация: [`/api/docs/`](http://localhost:8080/api/docs/) · снимок схемы: [`docs/openapi.json`](docs/openapi.json).
+
+### Аутентификация
+
+| Механизм | Заголовок / способ | Сценарий |
+| -------- | ------------------ | -------- |
+| **Session** | cookie после `POST /auth/login/` | браузер, SPA |
+| **API key** | `Authorization: Api-Key cd_…` | скрипты, внешние интеграции |
+
+Ключи выпускаются в Django Admin (`ApiKey.issue()`).
+
+### Пример: создать задачу
+
+```bash
+curl -X POST http://localhost:8080/api/v1/tasks/ \
+  -H "Authorization: Api-Key cd_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Разобрать PR",
+    "column_id": 1,
+    "week": "2026-W12",
+    "tags": ["backend"]
+  }'
+```
+
+Полный список эндпоинтов — [docs/DEVELOPERS.md §9](docs/DEVELOPERS.md#9-api-обзор-эндпоинтов).
+
+---
+
+## Данные и логи
+
+| Путь | Что хранится |
+| ---- | ------------ |
+| `postgres_data` (volume) | задачи, доски, недели, jobs, notifications |
+| `data/task-inbox/pending/` | входящие JSON для импорта |
+| `data/task-inbox/processed/` | успешно обработанные файлы |
+| `media/exports/` | сгенерированные CSV/XLSX |
+| `logs/api.log`, `logs/worker.log` | service logs (`CADENCE_LOG_DIR`) |
+
+В UI: **Настройки → Общие → Service logs**. В dev доступен Flower на `:5556`.
+
+---
+
+## Тесты
+
+```bash
+make test
+```
+
+| Слой | Инструмент | Покрытие |
+| ---- | ---------- | -------- |
+| Backend | pytest, ruff, mypy | ≥85% coverage (`apps/`), EC-тесты в `backend/tests/` |
+| Frontend | vue-tsc, Vitest | 17 spec-файлов, `npm run build` |
+
+Отдельно:
+
+```bash
+cd backend && DJANGO_SETTINGS_MODULE=cadence.settings.test uv run pytest tests/test_ec_boards.py -v
+cd frontend && npm run test -- --run
+```
+
+---
+
+## Деплой
+
+```bash
+# .env
+DJANGO_SECRET_KEY=<strong-random>
+DJANGO_DEBUG=false
+CSRF_TRUSTED_ORIGINS=https://your-domain.example
+DJANGO_ALLOWED_HOSTS=your-domain.example
+
+make up
+```
+
+Чеклист production — [docs/DEVELOPERS.md §14](docs/DEVELOPERS.md#14-production).
+
+---
+
+## Документация
+
+| Тема | Файл |
+| ---- | ---- |
+| Архитектура, apps, потоки данных, разработка | [docs/DEVELOPERS.md](docs/DEVELOPERS.md) |
+| История изменений | [CHANGELOG.md](CHANGELOG.md) |
+| OpenAPI snapshot | [docs/openapi.json](docs/openapi.json) |
+| Переменные окружения | [.env.example](.env.example) |
+
+---
+
+<div align="center">
+
+<sub>Cadence · v1.0.0 · Django · Vue · Celery · MIT</sub>
+
+</div>

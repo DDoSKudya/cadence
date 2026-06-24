@@ -2,7 +2,6 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.core.models import Tag
 from apps.tasks.models import Task
 from conftest import close_task_via_api, create_task_via_api
 
@@ -22,9 +21,9 @@ def test_tasks_ec_create_without_week_or_tags_uses_defaults(api_client, planned_
 
 @pytest.mark.django_db
 def test_tasks_ec_create_with_week_and_tags_succeeds(
-    api_client, planned_column, week_key
+    api_client, planned_column, week_key, make_tag
 ):
-    Tag.objects.create(name="Urgent", slug="urgent")
+    make_tag("Urgent", slug="urgent")
     response = create_task_via_api(
         api_client,
         title="Tagged task",
@@ -68,16 +67,85 @@ def test_tasks_ec_move_within_same_column_reorders_positions(
 def test_tasks_ec_move_between_columns_updates_column(
     api_client, planned_column, in_progress_column
 ):
+    from apps.boards.models import TaskStatus
+    from apps.tasks.models import Task
+
     created = create_task_via_api(
-        api_client, title="Move me", column_id=planned_column.id
+        api_client,
+        title="Move me",
+        column_id=planned_column.id,
+        description="Ready for development",
     )
+    task = Task.objects.get(pk=created.json()["id"])
+    ready_status = TaskStatus.objects.get(
+        board=task.board,
+        slug="ready_on_develop",
+    )
+    task.task_status = ready_status
+    task.save(update_fields=["task_status", "updated_at"])
+
     moved = api_client.post(
-        reverse("task-move", args=[created.json()["id"]]),
+        reverse("task-move", args=[task.id]),
         {"target_column_id": in_progress_column.id, "target_position": 0},
         content_type="application/json",
     )
     assert moved.status_code == 200
     assert moved.json()["column_id"] == in_progress_column.id
+
+
+@pytest.mark.django_db
+def test_tasks_ec_move_rejected_when_transition_not_allowed(
+    api_client, planned_column, in_progress_column, ready_column
+):
+    created = create_task_via_api(
+        api_client,
+        title="Blocked move",
+        column_id=planned_column.id,
+        description="Filled description",
+    )
+    blocked_ready = api_client.post(
+        reverse("task-move", args=[created.json()["id"]]),
+        {"target_column_id": ready_column.id, "target_position": 0},
+        content_type="application/json",
+    )
+    assert blocked_ready.status_code == 400
+
+    blocked_wip = api_client.post(
+        reverse("task-move", args=[created.json()["id"]]),
+        {"target_column_id": in_progress_column.id, "target_position": 0},
+        content_type="application/json",
+    )
+    assert blocked_wip.status_code == 400
+
+
+@pytest.mark.django_db
+def test_tasks_ec_workflow_move_to_in_progress_after_ready_on_develop(
+    api_client, planned_column, in_progress_column
+):
+    from apps.boards.models import TaskStatus
+    from apps.tasks.models import Task
+
+    created = create_task_via_api(
+        api_client,
+        title="Workflow move",
+        column_id=planned_column.id,
+        description="Ready for development",
+    )
+    task = Task.objects.get(pk=created.json()["id"])
+    ready_status = TaskStatus.objects.get(
+        board=task.board,
+        slug="ready_on_develop",
+    )
+    task.task_status = ready_status
+    task.save(update_fields=["task_status", "updated_at"])
+
+    allowed = api_client.post(
+        reverse("task-move", args=[task.id]),
+        {"target_column_id": in_progress_column.id, "target_position": 0},
+        content_type="application/json",
+    )
+    assert allowed.status_code == 200
+    assert allowed.json()["column_id"] == in_progress_column.id
 
 
 @pytest.mark.django_db

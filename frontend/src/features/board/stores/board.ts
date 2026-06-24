@@ -6,13 +6,17 @@ import { t } from "@/i18n";
 
 import * as boardApi from "../api";
 import type { BoardColumn, BoardTask, Tag, TaskCreatePayload } from "../types";
+import type { TaskStatusGraph } from "@/features/settings/task-status-graph";
+import { fetchTaskStatusGraph } from "@/features/settings/api";
 
 export const useBoardStore = defineStore("board", () => {
   const weekKey = ref(getCurrentWeekKey());
   const weekId = ref<number | null>(null);
   const boardName = ref("");
+  const boardIsDefault = ref(false);
   const columns = ref<BoardColumn[]>([]);
   const tags = ref<Tag[]>([]);
+  const statusGraph = ref<TaskStatusGraph>({ enforced: false, statuses: [], transitions: [] });
   const loading = ref(false);
   const error = ref("");
   const taskPanel = ref<{ mode: "create" } | { mode: "edit"; taskId: number } | null>(null);
@@ -85,10 +89,19 @@ export const useBoardStore = defineStore("board", () => {
     loading.value = true;
     error.value = "";
     try {
-      const payload = await boardApi.fetchBoard(weekKey.value);
+      const [payload, graph] = await Promise.all([
+        boardApi.fetchBoard(weekKey.value),
+        fetchTaskStatusGraph().catch(() => ({
+          enforced: false,
+          statuses: [],
+          transitions: [],
+        })),
+      ]);
       boardName.value = payload.board.name;
+      boardIsDefault.value = Boolean(payload.board.is_default);
       weekId.value = payload.week.id;
       columns.value = payload.columns;
+      statusGraph.value = graph;
     } catch (loadError) {
       error.value = loadError instanceof Error ? loadError.message : t("board.loadBoardFailed");
     } finally {
@@ -153,8 +166,10 @@ export const useBoardStore = defineStore("board", () => {
     weekKey,
     weekId,
     boardName,
+    boardIsDefault,
     columns,
     tags,
+    statusGraph,
     loading,
     error,
     taskPanel,

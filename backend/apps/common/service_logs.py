@@ -160,11 +160,13 @@ def get_service_logs(service_id: str, *, limit: int = 200) -> list[dict]:
         raise ValueError(msg)
 
     limit = max(1, min(limit, 500))
+    job_entries: list[ServiceLogEntry] = []
     entries: list[ServiceLogEntry] = []
     entries.extend(_buffer_entries(service_id))
     entries.extend(tail_log_file(service_id, limit=limit))
     if service_id == "worker":
-        entries.extend(_worker_job_logs(limit=min(50, limit)))
+        job_entries = _worker_job_logs(limit=min(50, limit))
+        entries.extend(job_entries)
 
     seen: set[tuple[str, str]] = set()
     unique: list[ServiceLogEntry] = []
@@ -176,4 +178,11 @@ def get_service_logs(service_id: str, *, limit: int = 200) -> list[dict]:
         unique.append(entry)
 
     unique.sort(key=_sort_key, reverse=True)
-    return [asdict(entry) for entry in unique[:limit]]
+    if service_id == "worker" and job_entries:
+        job_ids = {entry.job_id for entry in job_entries if entry.job_id is not None}
+        non_job = [entry for entry in unique if entry.job_id not in job_ids]
+        job_entries.sort(key=_sort_key, reverse=True)
+        trimmed = (job_entries + non_job)[:limit]
+    else:
+        trimmed = unique[:limit]
+    return [asdict(entry) for entry in trimmed]

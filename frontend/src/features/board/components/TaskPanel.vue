@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { RouterLink } from "vue-router";
 import {
   BellIcon,
   CalendarDaysIcon,
@@ -13,7 +14,13 @@ import {
 import * as boardApi from "@/features/board/api";
 import { priorityLabel } from "@/features/board/labels";
 import { useBoardStore } from "@/features/board/stores/board";
+import {
+  allowedStatusTargets,
+  findInitialStatus,
+} from "@/features/board/task-status";
 import type { TaskDetail } from "@/features/board/types";
+import { columnDotStyle } from "@/lib/column-color";
+import { columnDisplayName } from "@/lib/column-display";
 import { fromLocalInput, toLocalInput } from "@/lib/task-form";
 
 const board = useBoardStore();
@@ -29,6 +36,7 @@ const titleInput = ref<HTMLInputElement | null>(null);
 const title = ref("");
 const description = ref("");
 const columnId = ref<number | null>(null);
+const taskStatusId = ref<number | null>(null);
 const priority = ref("normal");
 const dueAt = ref("");
 const evidenceUrl = ref("");
@@ -40,9 +48,41 @@ const isCreate = computed(() => board.taskPanel?.mode === "create");
 const panelTitle = computed(() => (isCreate.value ? t("board.newTask") : t("board.task")));
 const isClosed = computed(() => Boolean(task.value?.closed_at));
 
+const initialStatus = computed(() => findInitialStatus(board.statusGraph));
+
 const defaultColumnId = computed(() => {
-  const backlog = board.sortedColumns.find((column) => column.system_type === "backlog");
-  return backlog?.id ?? board.sortedColumns[0]?.id ?? null;
+  if (initialStatus.value?.column_id) {
+    return initialStatus.value.column_id;
+  }
+  return board.sortedColumns[0]?.id ?? null;
+});
+
+const createStatusLabel = computed(() => initialStatus.value?.name ?? "—");
+
+const statusOptions = computed(() => {
+  if (!task.value?.task_status_id) {
+    return board.statusGraph.statuses.filter((status) => status.id !== null);
+  }
+  const current = board.statusGraph.statuses.find(
+    (status) => status.id === task.value?.task_status_id,
+  );
+  const targets = allowedStatusTargets(board.statusGraph, task.value.task_status_id);
+  const options = current ? [current, ...targets.filter((s) => s.id !== current.id)] : targets;
+  const seen = new Set<number>();
+  return options.filter((status) => {
+    if (status.id === null || seen.has(status.id)) {
+      return false;
+    }
+    seen.add(status.id);
+    return true;
+  });
+});
+
+const statusLocked = computed(() => {
+  const current = board.statusGraph.statuses.find(
+    (status) => status.id === task.value?.task_status_id,
+  );
+  return Boolean(current?.is_terminal);
 });
 
 function resetCreateForm() {
@@ -51,6 +91,7 @@ function resetCreateForm() {
   title.value = "";
   description.value = "";
   columnId.value = defaultColumnId.value;
+  taskStatusId.value = initialStatus.value?.id ?? null;
   priority.value = "normal";
   dueAt.value = "";
   evidenceUrl.value = "";
@@ -62,6 +103,7 @@ function syncForm(nextTask: TaskDetail) {
   title.value = nextTask.title;
   description.value = nextTask.description;
   columnId.value = nextTask.column_id;
+  taskStatusId.value = nextTask.task_status_id;
   priority.value = nextTask.priority;
   dueAt.value = toLocalInput(nextTask.due_at);
   evidenceUrl.value = nextTask.evidence_url;
@@ -93,6 +135,7 @@ watch(
       formError.value = "";
       return;
     }
+    void board.loadTags();
     if (panel.mode === "create") {
       resetCreateForm();
       await nextTick();
@@ -102,6 +145,12 @@ watch(
     void loadTask(panel.taskId);
   },
 );
+
+watch(defaultColumnId, (value) => {
+  if (isCreate.value && columnId.value === null) {
+    columnId.value = value;
+  }
+});
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === "Escape" && isOpen.value) {
@@ -175,7 +224,8 @@ async function saveTask() {
   saving.value = true;
   formError.value = "";
   try {
-    const updated = await boardApi.updateTask(task.value.id, {
+    const statusChanged = taskStatusId.value !== task.value.task_status_id;
+    await boardApi.updateTask(task.value.id, {
       title: title.value.trim(),
       description: description.value,
       priority: priority.value,
@@ -183,9 +233,9 @@ async function saveTask() {
       due_at: fromLocalInput(dueAt.value),
       evidence_url: evidenceUrl.value.trim(),
       reminder_enabled: reminderEnabled.value,
+      ...(statusChanged ? { task_status_id: taskStatusId.value } : {}),
     });
-    task.value = updated;
-    syncForm(updated);
+    closePanel();
     await board.refreshAfterDrawer();
   } catch (saveError) {
     formError.value =
@@ -269,13 +319,45 @@ async function closeTaskAction() {
               />
             </label>
 
-            <label v-if="isCreate" class="form-field">
+            <label v-if="isCreate && !initialStatus?.column_id" class="form-field">
               <span class="form-label">{{ $t("board.column") }}</span>
               <select v-model="columnId" class="field px-3 py-2">
                 <option v-for="column in board.sortedColumns" :key="column.id" :value="column.id">
-                  {{ column.name }}
+                  {{ columnDisplayName(column) }}
                 </option>
               </select>
+            </label>
+
+            <div v-if="isCreate" class="form-field">
+              <span class="form-label">{{ $t("board.taskStatus") }}</span>
+              <div class="task-status-readonly">
+                <span
+                  v-if="initialStatus"
+                  class="task-status-readonly-dot"
+                  :style="columnDotStyle(initialStatus.color)"
+                />
+                <span>{{ createStatusLabel }}</span>
+              </div>
+              <p class="form-hint">{{ $t("board.taskStatusInitialHint") }}</p>
+            </div>
+
+            <label v-else class="form-field">
+              <span class="form-label">{{ $t("board.taskStatus") }}</span>
+              <select
+                v-model="taskStatusId"
+                class="field px-3 py-2"
+                :disabled="isClosed || statusLocked || statusOptions.length === 0"
+              >
+                <option
+                  v-for="status in statusOptions"
+                  :key="status.id ?? status.name"
+                  :value="status.id"
+                >
+                  {{ status.name }}
+                </option>
+              </select>
+              <p v-if="statusLocked" class="form-hint">{{ $t("board.taskStatusTerminalHint") }}</p>
+              <p v-else class="form-hint">{{ $t("board.taskStatusChangeHint") }}</p>
             </label>
 
             <label class="form-field">
@@ -316,12 +398,13 @@ async function closeTaskAction() {
               </span>
             </label>
 
-            <fieldset v-if="board.tags.length" class="form-field">
+            <fieldset class="form-field">
               <legend class="form-label">
                 <TagIcon class="icon-sm inline" />
                 {{ $t("common.tags") }}
               </legend>
-              <div class="tag-picker">
+
+              <div v-if="board.tags.length" class="tag-picker">
                 <label
                   v-for="tag in board.tags"
                   :key="tag.id"
@@ -333,9 +416,18 @@ async function closeTaskAction() {
                     type="checkbox"
                     @change="toggleTag(tag.slug)"
                   />
+                  <span class="tag-picker-dot" :style="columnDotStyle(tag.color)" />
                   <span>{{ tag.name }}</span>
                 </label>
               </div>
+
+              <p v-else class="tag-picker-empty">
+                {{ $t("board.noTagsYet") }}
+              </p>
+
+              <RouterLink class="tag-picker-manage" to="/settings/columns?tab=tags">
+                {{ $t("board.manageTags") }}
+              </RouterLink>
             </fieldset>
           </form>
         </div>

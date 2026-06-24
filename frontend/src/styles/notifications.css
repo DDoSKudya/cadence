@@ -6,6 +6,10 @@
   overflow: hidden;
 }
 
+.notify-shell {
+  animation: scheme-rise-in var(--motion-slow) var(--ease-emphasis) both;
+}
+
 .notify-rules-panel {
   min-width: 0;
   min-height: 0;
@@ -84,6 +88,32 @@
 
 .notify-fold-open {
   box-shadow: var(--shadow-card);
+  transition: box-shadow var(--motion-medium) var(--ease-soft);
+}
+
+.notify-fold-collapse-enter-active {
+  overflow: hidden;
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis),
+    max-height var(--motion-slow) var(--ease-emphasis);
+  max-height: 50rem;
+}
+
+.notify-fold-collapse-leave-active {
+  overflow: hidden;
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    max-height var(--motion-medium) var(--ease-soft);
+  max-height: 50rem;
+}
+
+.notify-fold-collapse-enter-from,
+.notify-fold-collapse-leave-to {
+  opacity: 0;
+  transform: translateY(-0.35rem);
+  max-height: 0;
 }
 
 .notify-fold-trigger {
@@ -97,11 +127,14 @@
   padding: 0.6875rem 0.875rem;
   text-align: left;
   cursor: pointer;
-  transition: background var(--motion-fast) var(--ease-soft);
+  transition:
+    background var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
 }
 
 .notify-fold-trigger:hover {
   background: var(--color-surface-muted);
+  transform: translateY(-1px);
 }
 
 .notify-fold-icon {
@@ -189,6 +222,9 @@
   line-height: 1.2;
   white-space: nowrap;
   cursor: help;
+  transition:
+    background var(--motion-fast) var(--ease-soft),
+    color var(--motion-fast) var(--ease-soft);
 }
 
 .notify-bot-status-time {
@@ -339,6 +375,13 @@
   align-items: center;
   gap: 0.35rem;
   white-space: nowrap;
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.notify-recipients-add-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .notify-add-form {
@@ -370,6 +413,15 @@
 .notify-icon-btn {
   width: 2rem;
   height: 2rem;
+  transition:
+    border-color var(--motion-fast) var(--ease-soft),
+    color var(--motion-fast) var(--ease-soft),
+    background var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.notify-icon-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .notify-add-btn {
@@ -403,6 +455,44 @@
   border-radius: var(--radius-md);
   background: var(--color-bg);
   padding: 0.5rem 0.625rem;
+  transition:
+    border-color var(--motion-fast) var(--ease-soft),
+    background var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.notify-recipient-item:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-muted);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+}
+
+.notify-list-enter-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-emphasis),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.notify-list-leave-active {
+  transition:
+    opacity var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
+}
+
+.notify-list-enter-from {
+  opacity: 0;
+  transform: translateY(0.35rem);
+}
+
+.notify-list-leave-to {
+  opacity: 0;
+  transform: translateX(0.35rem);
+}
+
+.notify-list-move {
+  transition: transform var(--motion-medium) var(--ease-emphasis);
 }
 
 .notify-recipient-badge {
@@ -458,11 +548,6 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--color-text-secondary);
-}
-
-.notify-icon-btn {
-  width: 2rem;
-  height: 2rem;
 }
 
 @media (max-width: 900px) {

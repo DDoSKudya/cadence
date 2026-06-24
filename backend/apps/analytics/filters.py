@@ -6,6 +6,7 @@ from django.utils.dateparse import parse_date
 from rest_framework.request import Request
 
 from apps.core.models import Tag
+from apps.core.tag_services import TagService
 from apps.jobs.selectors import parse_datetime_param
 from apps.weeks.models import Week
 from apps.weeks.services import WeekService
@@ -129,11 +130,12 @@ def _parse_date_end(value: str | None) -> datetime | None:
 def resolve_tag_ids(tags: list[str]) -> list[int]:
     if not tags:
         return []
+    scheme = TagService.get_active_scheme()
     tag_ids: list[int] = []
     for value in tags:
-        tag = Tag.objects.filter(slug=value).first()
+        tag = Tag.objects.filter(scheme=scheme, slug=value).first()
         if tag is None:
-            tag = Tag.objects.filter(name__iexact=value).first()
+            tag = Tag.objects.filter(scheme=scheme, name__iexact=value).first()
         if tag is not None:
             tag_ids.append(tag.id)
     return tag_ids

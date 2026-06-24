@@ -4,7 +4,6 @@ import { useI18n } from "vue-i18n";
 import {
   ArchiveBoxIcon,
   ArrowTopRightOnSquareIcon,
-  ArrowUturnLeftIcon,
   CalendarDaysIcon,
   CheckBadgeIcon,
   ChevronLeftIcon,
@@ -26,7 +25,6 @@ import {
 import {
   fetchArchiveTask,
   fetchArchiveTasks,
-  reopenArchiveTask,
 } from "@/features/archive/api";
 import type { ArchiveFilters, ArchiveTaskDetail, ArchiveTaskSummary } from "@/features/archive/types";
 import { fetchTags } from "@/features/board/api";
@@ -34,12 +32,10 @@ import type { Tag } from "@/features/board/types";
 import { priorityLabel } from "@/features/board/labels";
 import { formatDateTime, formatDateTimeLong } from "@/lib/datetime";
 import { formatWeekKey } from "@/lib/week";
-import { useToastStore } from "@/stores/toast";
 
 const PAGE_SIZE = 20;
 const POLL_INTERVAL_MS = 5000;
 const { t } = useI18n();
-const toast = useToastStore();
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 const listKey = ref(0);
@@ -53,7 +49,6 @@ const tags = ref<Tag[]>([]);
 const loading = ref(true);
 const pageLoading = ref(false);
 const detailLoading = ref(false);
-const acting = ref(false);
 const filtersOpen = ref(false);
 const error = ref("");
 
@@ -204,26 +199,6 @@ async function changePage(nextPage: number) {
   await refreshArchive({ pageChange: true });
 }
 
-async function reopenSelected() {
-  if (!selectedTask.value) {
-    return;
-  }
-  acting.value = true;
-  error.value = "";
-  try {
-    await reopenArchiveTask(selectedTask.value.id);
-    toast.success(t("archive.taskRestored"));
-    selectedId.value = null;
-    selectedTask.value = null;
-    await refreshArchive({ initial: true });
-  } catch (reopenError) {
-    error.value =
-      reopenError instanceof Error ? reopenError.message : t("errors.reopenTask");
-  } finally {
-    acting.value = false;
-  }
-}
-
 watch(selectedId, (taskId) => {
   if (taskId) {
     void loadDetail(taskId, { initial: !selectedTask.value });
@@ -240,7 +215,7 @@ onMounted(async () => {
   }
   await refreshArchive({ initial: true });
   pollTimer = setInterval(() => {
-    if (document.visibilityState === "visible" && !acting.value) {
+    if (document.visibilityState === "visible") {
       void refreshArchive();
     }
   }, POLL_INTERVAL_MS);
@@ -444,15 +419,6 @@ onUnmounted(() => {
                         </span>
                       </div>
                     </div>
-                    <button
-                      class="archive-reopen-btn"
-                      type="button"
-                      :disabled="acting"
-                      @click="reopenSelected"
-                    >
-                      <ArrowUturnLeftIcon class="icon-sm" />
-                      {{ acting ? $t("archive.restoring") : $t("archive.restoreToBoard") }}
-                    </button>
                   </div>
 
                   <div class="archive-detail-scroll">

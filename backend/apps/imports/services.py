@@ -10,11 +10,12 @@ from django.conf import settings
 from django.db import transaction
 from django.db.utils import DatabaseError, OperationalError
 from django.utils import timezone
-from django.utils.text import get_valid_filename, slugify
+from django.utils.text import get_valid_filename
 
-from apps.boards.models import BoardColumn
+from apps.boards.models import BoardColumn, SystemType
 from apps.boards.services import ColumnSettingsService
-from apps.core.models import ProjectSettings, Tag
+from apps.core.models import ProjectSettings
+from apps.core.tag_services import TagService
 from apps.imports.models import ImportLog, ImportStatus
 from apps.imports.validators import (
     ImportFilePayload,
@@ -25,6 +26,10 @@ from apps.tasks.events import EventActor, record_task_event
 from apps.tasks.models import ActorType, TaskEventType, TaskSource
 from apps.tasks.services import TaskCreateInput, TaskCreationService
 from apps.weeks.services import WeekService
+
+_LEGACY_COLUMN_ALIASES: dict[str, str] = {
+    "planned": SystemType.BACKLOG,
+}
 
 
 @dataclass(frozen=True)
@@ -383,6 +388,12 @@ class JsonImportService:
         normalized = column_ref.strip().lower()
         columns = BoardColumn.objects.filter(board_id=board_id, is_active=True)
 
+        alias_type = _LEGACY_COLUMN_ALIASES.get(normalized)
+        if alias_type is not None:
+            by_alias = columns.filter(system_type=alias_type).first()
+            if by_alias is not None:
+                return by_alias
+
         by_system_type = columns.filter(system_type__iexact=normalized).first()
         if by_system_type is not None:
             return by_system_type
@@ -395,16 +406,10 @@ class JsonImportService:
 
     @staticmethod
     def _resolve_tag_slugs(tag_names: list[str]) -> list[str]:
+        scheme = TagService.get_active_scheme()
         slugs: list[str] = []
         for name in tag_names:
-            slug = slugify(name) or name.strip().lower()
-            tag, _created = Tag.objects.get_or_create(
-                slug=slug,
-                defaults={"name": name.strip()},
-            )
-            if tag.name != name.strip():
-                tag.name = name.strip()
-                tag.save(update_fields=["name"])
+            tag = TagService.get_or_create_by_name(scheme=scheme, name=name)
             slugs.append(tag.slug)
         return slugs
 

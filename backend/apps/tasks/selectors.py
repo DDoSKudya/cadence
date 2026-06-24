@@ -18,7 +18,7 @@ def active_tasks_for_board(board: Board, week: Week):
     return (
         Task.objects.filter(board=board, archived_at__isnull=True)
         .filter(Q(week=week) | Q(week__isnull=True))
-        .select_related("week", "column")
+        .select_related("week", "column", "task_status")
         .prefetch_related("tags")
         .order_by("column_id", "position")
     )

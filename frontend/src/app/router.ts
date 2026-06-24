@@ -2,13 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import AppLayout from "@/components/layout/AppLayout.vue";
 import LoginView from "@/features/auth/views/LoginView.vue";
-import ArchiveView from "@/features/archive/views/ArchiveView.vue";
-import BoardView from "@/features/board/views/BoardView.vue";
-import ColumnsSettingsView from "@/features/settings/views/ColumnsSettingsView.vue";
-import GeneralSettingsView from "@/features/settings/views/GeneralSettingsView.vue";
-import NotificationsSettingsView from "@/features/settings/views/NotificationsSettingsView.vue";
-import AnalyticsView from "@/features/analytics/views/AnalyticsView.vue";
-import WeekReviewView from "@/features/week-review/views/WeekReviewView.vue";
 import { useAuthStore } from "@/stores/auth";
 
 export const router = createRouter({
@@ -31,32 +24,32 @@ export const router = createRouter({
         {
           path: "board",
           name: "board",
-          component: BoardView,
+          component: () => import("@/features/board/views/BoardView.vue"),
         },
         {
           path: "archive",
           name: "archive",
-          component: ArchiveView,
+          component: () => import("@/features/archive/views/ArchiveView.vue"),
         },
         {
           path: "week/:id/review",
           name: "week-review",
-          component: WeekReviewView,
+          component: () => import("@/features/week-review/views/WeekReviewView.vue"),
         },
         {
           path: "settings/general",
           name: "settings-general",
-          component: GeneralSettingsView,
+          component: () => import("@/features/settings/views/GeneralSettingsView.vue"),
         },
         {
           path: "settings/columns",
           name: "settings-columns",
-          component: ColumnsSettingsView,
+          component: () => import("@/features/settings/views/ColumnsSettingsView.vue"),
         },
         {
           path: "settings/notifications",
           name: "settings-notifications",
-          component: NotificationsSettingsView,
+          component: () => import("@/features/settings/views/NotificationsSettingsView.vue"),
         },
         {
           path: "settings/telegram",
@@ -65,7 +58,7 @@ export const router = createRouter({
         {
           path: "analytics",
           name: "analytics",
-          component: AnalyticsView,
+          component: () => import("@/features/analytics/views/AnalyticsView.vue"),
         },
         {
           path: "jobs",

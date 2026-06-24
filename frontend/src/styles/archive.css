@@ -661,34 +661,6 @@
   color: var(--color-primary);
 }
 
-.archive-reopen-btn {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.5rem;
-  border: none;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #6b7df0 100%);
-  padding: 0.625rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #fff;
-  box-shadow: 0 4px 14px rgb(91 110 232 / 0.32);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft),
-    opacity var(--motion-fast) var(--ease-soft);
-}
-
-.archive-reopen-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgb(91 110 232 / 0.38);
-}
-
-.archive-reopen-btn:disabled {
-  opacity: 0.65;
-}
-
 .archive-detail-scroll {
   display: flex;
   min-height: 0;
@@ -959,10 +931,5 @@
 
   .archive-hero {
     flex-direction: column;
-  }
-
-  .archive-reopen-btn {
-    width: 100%;
-    justify-content: center;
   }
 }

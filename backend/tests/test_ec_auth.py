@@ -67,6 +67,36 @@ def test_auth_ec_session_user_accesses_settings_and_tags(session_client):
 
 
 @pytest.mark.django_db
+def test_auth_ec_tag_crud_lifecycle(api_client):
+    create = api_client.post(
+        reverse("tag-list"),
+        {"name": "EC Tag", "color": "blue"},
+        content_type="application/json",
+    )
+    assert create.status_code == 201
+    tag_id = create.json()["id"]
+    assert create.json()["name"] == "EC Tag"
+    assert create.json()["slug"] == "ec-tag"
+
+    update = api_client.patch(
+        reverse("tag-detail", kwargs={"pk": tag_id}),
+        {"name": "EC Tag API", "color": "#2563eb"},
+        content_type="application/json",
+    )
+    assert update.status_code == 200
+    assert update.json()["name"] == "EC Tag API"
+
+    listed = api_client.get(reverse("tag-list")).json()
+    assert any(item["id"] == tag_id for item in listed)
+
+    delete = api_client.delete(reverse("tag-detail", kwargs={"pk": tag_id}))
+    assert delete.status_code == 204
+    assert not any(
+        item["id"] == tag_id for item in api_client.get(reverse("tag-list")).json()
+    )
+
+
+@pytest.mark.django_db
 def test_auth_ec_settings_language_can_be_updated(api_client):
     response = api_client.patch(
         reverse("settings"),
