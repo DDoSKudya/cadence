@@ -28,6 +28,7 @@ from apps.tasks.services import (
     TaskUpdateService,
     create_task_from_request,
 )
+from apps.weeks.rollover import WeekRolloverService
 from apps.weeks.services import WeekService
 
 
@@ -55,7 +56,7 @@ class TaskDetailView(APIView):
     def get_object(self, pk: int) -> Task:
         board = ColumnSettingsService.get_default_board()
         return get_object_or_404(
-            Task.objects.select_related("week").prefetch_related("tags"),
+            Task.objects.select_related("week", "task_status").prefetch_related("tags"),
             pk=pk,
             board=board,
         )
@@ -101,6 +102,8 @@ class TaskDetailView(APIView):
             reminder_interval_minutes=data.get("reminder_interval_minutes"),
             clear_reminder_interval=clear_reminder_interval,
             tag_slugs=data.get("tags"),
+            task_status_id=data.get("task_status_id"),
+            task_status_provided="task_status_id" in data,
         )
         task = TaskUpdateService.update(task, update_input)
         return Response(TaskSerializer(task).data)
@@ -160,6 +163,7 @@ class TaskEventsView(APIView):
 
 class BoardView(APIView):
     def get(self, request: Request):
+        WeekRolloverService.process()
         board = ColumnSettingsService.get_default_board()
         week_value = request.query_params.get("week")
         week = WeekService.resolve_week(week_value)

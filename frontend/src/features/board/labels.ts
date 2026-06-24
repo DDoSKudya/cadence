@@ -12,6 +12,7 @@ const SYSTEM_TYPE_LABEL_KEYS: Record<string, string> = {
   in_progress: "board.systemInProgress",
   blocked: "board.systemBlocked",
   review: "board.systemReview",
+  ready: "board.systemReady",
   done: "board.systemDone",
 };
 

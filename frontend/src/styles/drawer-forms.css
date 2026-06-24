@@ -127,6 +127,31 @@
   color: var(--color-primary);
 }
 
+.tag-picker-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.tag-picker-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.tag-picker-manage {
+  display: inline-block;
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.tag-picker-manage:hover {
+  text-decoration: underline;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;

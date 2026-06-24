@@ -114,7 +114,7 @@ class ReminderPlanningService:
             if stale_delta >= threshold:
                 return NotificationReason.STALE_IN_PROGRESS
 
-        if task.column.system_type == SystemType.PLANNED:
+        if task.column.system_type in (SystemType.PLANNED, SystemType.BACKLOG):
             threshold = timedelta(minutes=project_settings.stale_planned_minutes)
             if stale_delta >= threshold:
                 return NotificationReason.STALE_PLANNED

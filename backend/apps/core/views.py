@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from apps.common.platform_status import collect_platform_status
 from apps.common.service_logs import SERVICE_IDS, get_service_logs, log_file_exists
-from apps.core.models import ProjectSettings, Tag
+from apps.core.models import ProjectSettings
 from apps.core.serializers import (
     LoginSerializer,
     ProjectSettingsSerializer,
@@ -14,6 +14,7 @@ from apps.core.serializers import (
     TelegramBotCheckSerializer,
     UserSerializer,
 )
+from apps.core.tag_services import TagService
 from apps.core.telegram_check import run_telegram_bot_check
 
 
@@ -107,14 +108,17 @@ class TagListCreateView(generics.ListCreateAPIView):
     serializer_class = TagSerializer
 
     def get_queryset(self):
-        return Tag.objects.filter(is_active=True)
+        return TagService.queryset_for_active_scheme()
+
+    def perform_create(self, serializer):
+        serializer.save(scheme=TagService.get_active_scheme())
 
 
 class TagDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TagSerializer
 
     def get_queryset(self):
-        return Tag.objects.filter(is_active=True)
+        return TagService.queryset_for_active_scheme()
 
     def perform_destroy(self, instance):
         instance.is_active = False

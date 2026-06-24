@@ -39,13 +39,37 @@ def board():
 
 
 @pytest.fixture
+def active_scheme(board):
+    from apps.boards.scheme_services import BoardSchemeService
+
+    scheme = BoardSchemeService.get_active_scheme(board)
+    assert scheme is not None
+    return scheme
+
+
+@pytest.fixture
+def make_tag(active_scheme):
+    from apps.core.models import Tag
+
+    def _make_tag(name: str, slug: str | None = None, **kwargs):
+        return Tag.objects.create(
+            scheme=active_scheme,
+            name=name,
+            slug=slug or name.strip().lower().replace(" ", "-"),
+            **kwargs,
+        )
+
+    return _make_tag
+
+
+@pytest.fixture
 def backlog_column(board):
     return BoardColumn.objects.get(board=board, system_type=SystemType.BACKLOG)
 
 
 @pytest.fixture
 def planned_column(board):
-    return BoardColumn.objects.get(board=board, system_type=SystemType.PLANNED)
+    return BoardColumn.objects.get(board=board, system_type=SystemType.BACKLOG)
 
 
 @pytest.fixture
@@ -54,8 +78,13 @@ def in_progress_column(board):
 
 
 @pytest.fixture
+def ready_column(board):
+    return BoardColumn.objects.get(board=board, system_type=SystemType.READY)
+
+
+@pytest.fixture
 def done_column(board):
-    return BoardColumn.objects.get(board=board, system_type=SystemType.DONE)
+    return BoardColumn.objects.filter(board=board, system_type=SystemType.DONE).first()
 
 
 @pytest.fixture
@@ -123,12 +152,15 @@ def create_task_via_api(
     column_id: int,
     week: str | None = None,
     tags: list[str] | None = None,
+    description: str | None = None,
 ):
     payload: dict = {"title": title, "column_id": column_id}
     if week is not None:
         payload["week"] = week
     if tags is not None:
         payload["tags"] = tags
+    if description is not None:
+        payload["description"] = description
     return client.post(
         reverse("task-list"),
         payload,

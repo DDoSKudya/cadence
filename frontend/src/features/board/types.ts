@@ -23,6 +23,15 @@ export interface BoardTask {
   due_at: string | null;
   source: string;
   tags: Tag[];
+  task_status_id?: number | null;
+  task_status_name?: string | null;
+}
+
+export interface TaskStatusInfo {
+  id: number;
+  name: string;
+  slug: string;
+  color: string;
 }
 
 export interface BoardColumn extends ColumnMeta {
@@ -30,7 +39,7 @@ export interface BoardColumn extends ColumnMeta {
 }
 
 export interface BoardResponse {
-  board: { id: number; name: string };
+  board: { id: number; name: string; is_default?: boolean };
   week: WeekInfo;
   columns: BoardColumn[];
 }
@@ -52,6 +61,8 @@ export interface TaskDetail {
   tags: Tag[];
   closed_at: string | null;
   archived_at: string | null;
+  task_status_id: number | null;
+  task_status: TaskStatusInfo | null;
 }
 
 export interface TaskCreatePayload {
@@ -74,4 +85,5 @@ export interface TaskUpdatePayload {
   due_at?: string | null;
   evidence_url?: string;
   reminder_enabled?: boolean;
+  task_status_id?: number | null;
 }

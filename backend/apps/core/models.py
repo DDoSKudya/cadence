@@ -75,6 +75,8 @@ class ProjectSettings(models.Model):
     stale_planned_minutes = models.PositiveIntegerField(default=10080)
     quiet_hours_start = models.TimeField(null=True, blank=True)
     quiet_hours_end = models.TimeField(null=True, blank=True)
+    week_rollover_iso_year = models.PositiveIntegerField(null=True, blank=True)
+    week_rollover_iso_week = models.PositiveIntegerField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -112,15 +114,27 @@ class ProjectSettings(models.Model):
 
 class Tag(models.Model):
     id: int
+    scheme_id: int
 
+    scheme = models.ForeignKey(
+        "boards.BoardScheme",
+        on_delete=models.CASCADE,
+        related_name="tags",
+    )
     name = models.CharField(max_length=50)
-    slug = models.SlugField(max_length=60, unique=True, blank=True)
+    slug = models.SlugField(max_length=60, blank=True)
     color = models.CharField(max_length=20, blank=True, default="#64748b")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ("name",)
+        constraints = (
+            models.UniqueConstraint(
+                fields=("scheme", "slug"),
+                name="uq_tag_scheme_slug",
+            ),
+        )
 
     def __str__(self) -> str:
         return self.name

@@ -9,13 +9,22 @@ import BoardImportJson from "@/features/board/components/BoardImportJson.vue";
 import TaskPanel from "@/features/board/components/TaskPanel.vue";
 import WeekSwitcher from "@/features/board/components/WeekSwitcher.vue";
 import { useBoardStore } from "@/features/board/stores/board";
+import { boardDisplayName } from "@/lib/column-display";
 
 const board = useBoardStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const totalTasks = computed(() =>
   board.sortedColumns.reduce((total, column) => total + column.tasks.length, 0),
 );
+
+const pageTitle = computed(() => {
+  void locale.value;
+  if (board.boardIsDefault) {
+    return boardDisplayName({ name: board.boardName, is_default: true });
+  }
+  return board.boardName || t("board.titleFallback");
+});
 
 const metaLine = computed(() => {
   const tasks = t("board.taskCount", totalTasks.value);
@@ -33,7 +42,7 @@ onMounted(async () => {
     <div class="board-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
-          <h1 class="page-title">{{ board.boardName || $t("board.titleFallback") }}</h1>
+          <h1 class="page-title">{{ pageTitle }}</h1>
           <p class="page-meta">{{ metaLine }}</p>
         </div>
 

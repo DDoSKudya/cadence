@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import draggable from "vuedraggable";
 import { ExclamationTriangleIcon } from "@heroicons/vue/24/outline";
 
@@ -8,6 +9,7 @@ import {
   columnDotStyle,
   columnHeaderStyle,
 } from "@/lib/column-color";
+import { columnDisplayName } from "@/lib/column-display";
 import { useBoardStore } from "@/features/board/stores/board";
 import type { BoardColumn, BoardTask } from "@/features/board/types";
 
@@ -18,6 +20,12 @@ const props = defineProps<{
 }>();
 
 const board = useBoardStore();
+const { locale } = useI18n();
+
+const displayName = computed(() => {
+  void locale.value;
+  return columnDisplayName(props.column);
+});
 
 const visibleCount = computed(
   () => board.visibleTasks(props.column.id).length,
@@ -59,7 +67,7 @@ async function onDragChange(event: DragChangeEvent) {
           class="column-dot"
           :style="columnDotStyle(column.color)"
         />
-        <h2 class="board-column-name">{{ column.name }}</h2>
+        <h2 class="board-column-name">{{ displayName }}</h2>
         <span class="column-count" :style="columnCountStyle(column.color)">
           {{ taskCount }}
         </span>

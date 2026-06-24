@@ -346,53 +346,58 @@ onMounted(loadSettings);
 
 <template>
   <div class="settings-page">
-    <div class="board-shell settings-board-shell">
+    <div class="board-shell settings-board-shell notify-shell">
       <header class="board-toolbar shrink-0">
         <div class="board-toolbar-info">
           <h1 class="page-title">{{ $t("settings.notificationsTitle") }}</h1>
           <p class="page-meta">{{ headerMeta }}</p>
         </div>
 
-        <div v-if="isDirty && form" class="board-toolbar-actions">
-          <button class="btn-ghost px-4 py-2 text-sm" type="button" :disabled="saving" @click="discardChanges">
-            {{ $t("common.cancel") }}
-          </button>
-          <button
-            class="btn-primary px-4 py-2 text-sm disabled:opacity-60"
-            type="button"
-            :disabled="saving"
-            @click="saveSettings"
-          >
-            {{ saving ? $t("common.saving") : $t("common.save") }}
-          </button>
-        </div>
+        <Transition name="scheme-alert-slide">
+          <div v-if="isDirty && form" key="actions" class="board-toolbar-actions">
+            <button class="btn-ghost px-4 py-2 text-sm" type="button" :disabled="saving" @click="discardChanges">
+              {{ $t("common.cancel") }}
+            </button>
+            <button
+              class="btn-primary px-4 py-2 text-sm disabled:opacity-60"
+              type="button"
+              :disabled="saving"
+              @click="saveSettings"
+            >
+              {{ saving ? $t("common.saving") : $t("common.save") }}
+            </button>
+          </div>
+        </Transition>
       </header>
 
-      <p v-if="error" class="alert-error mx-4 mt-3 shrink-0">{{ error }}</p>
+      <Transition name="scheme-alert-slide">
+        <p v-if="error" key="page-error" class="alert-error mx-4 mt-3 shrink-0">{{ error }}</p>
+      </Transition>
 
-      <div v-if="loading" class="settings-body settings-body-center">
-        <div class="loading-state">
-          <span class="loading-spinner" aria-hidden="true" />
-          <p class="text-sm text-(--color-text-secondary)">{{ $t("common.loading") }}</p>
+      <Transition name="scheme-body-swap" mode="out-in">
+        <div v-if="loading" key="loading" class="settings-body settings-body-center">
+          <div class="loading-state">
+            <span class="loading-spinner" aria-hidden="true" />
+            <p class="text-sm text-(--color-text-secondary)">{{ $t("common.loading") }}</p>
+          </div>
         </div>
-      </div>
 
-      <div v-else-if="loadFailed" class="settings-body settings-body-center">
-        <div class="jobs-empty">
-          <span class="jobs-empty-icon">
-            <BellAlertIcon class="size-7" />
-          </span>
-          <p class="jobs-empty-title">{{ $t("errors.loadSettings") }}</p>
-          <button class="btn btn-secondary mt-2" type="button" @click="loadSettings">
-            <ArrowPathIcon class="icon-sm" />
-            {{ $t("common.retry") }}
-          </button>
+        <div v-else-if="loadFailed" key="error" class="settings-body settings-body-center">
+          <div class="jobs-empty">
+            <span class="jobs-empty-icon">
+              <BellAlertIcon class="size-7" />
+            </span>
+            <p class="jobs-empty-title">{{ $t("errors.loadSettings") }}</p>
+            <button class="btn btn-secondary mt-2" type="button" @click="loadSettings">
+              <ArrowPathIcon class="icon-sm" />
+              {{ $t("common.retry") }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div v-else-if="form" class="settings-body settings-body-split">
+        <div v-else-if="form" key="content" class="settings-body settings-body-split">
         <div class="notify-split">
-          <section class="settings-panel notify-rules-panel">
+          <section class="settings-panel notify-rules-panel scheme-stagger-item" style="--scheme-item-delay: 0ms">
             <header class="settings-panel-header">
               <div class="notify-panel-head">
                 <span class="notify-fold-icon notify-fold-icon-rules">
@@ -461,7 +466,7 @@ onMounted(loadSettings);
             </div>
           </section>
 
-          <div class="notify-channels-column">
+          <div class="notify-channels-column scheme-stagger-item" style="--scheme-item-delay: 40ms">
             <section class="notify-fold notify-channel-fold" :class="{ 'notify-fold-open': openTelegram }">
               <button type="button" class="notify-fold-trigger" @click="openTelegram = !openTelegram">
                 <span class="notify-fold-icon notify-fold-icon-telegram">
@@ -480,6 +485,7 @@ onMounted(loadSettings);
                 </span>
                 <span
                   v-if="form.telegram_enabled"
+                  key="bot-status"
                   class="notify-bot-status"
                   :class="botHealth.class"
                   :title="botHealth.title"
@@ -501,11 +507,14 @@ onMounted(loadSettings);
                 <ChevronDownIcon class="notify-fold-chevron" />
               </button>
 
-              <div v-show="openTelegram" class="notify-fold-body notify-channel-body">
-                <p v-if="telegramSetupIssues.length" class="notify-setup-alert">
-                  <ExclamationTriangleIcon />
-                  {{ telegramSetupWarning }}
-                </p>
+              <Transition name="notify-fold-collapse">
+                <div v-if="openTelegram" class="notify-fold-body notify-channel-body">
+                <Transition name="scheme-alert-slide">
+                  <p v-if="telegramSetupIssues.length" key="setup-warn" class="notify-setup-alert">
+                    <ExclamationTriangleIcon />
+                    {{ telegramSetupWarning }}
+                  </p>
+                </Transition>
 
                 <form class="task-form notify-channel-form">
                   <label class="form-field">
@@ -550,11 +559,17 @@ onMounted(loadSettings);
                     </button>
                   </div>
 
-                  <ul v-if="form.telegram_recipients.length" class="notify-recipient-list">
+                  <TransitionGroup
+                    v-if="form.telegram_recipients.length"
+                    name="notify-list"
+                    tag="ul"
+                    class="notify-recipient-list"
+                  >
                     <li
                       v-for="(item, index) in form.telegram_recipients"
                       :key="item.chat_id"
-                      class="notify-recipient-item"
+                      class="notify-recipient-item scheme-stagger-item"
+                      :style="{ '--scheme-item-delay': `${index * 40}ms` }"
                     >
                       <span
                         class="notify-recipient-badge"
@@ -580,14 +595,20 @@ onMounted(loadSettings);
                         <TrashIcon class="icon-sm" />
                       </button>
                     </li>
-                  </ul>
-                  <p v-else class="notify-recipient-empty">{{ $t("settings.noRecipients") }}</p>
+                  </TransitionGroup>
+                  <Transition name="scheme-body-swap" mode="out-in">
+                    <p v-if="!form.telegram_recipients.length" key="empty" class="notify-recipient-empty">
+                      {{ $t("settings.noRecipients") }}
+                    </p>
+                  </Transition>
                 </div>
               </div>
+              </Transition>
             </section>
           </div>
         </div>
-      </div>
+        </div>
+      </Transition>
     </div>
 
     <Teleport to="body">
@@ -616,7 +637,9 @@ onMounted(loadSettings);
             </header>
 
             <div class="drawer-body">
-              <p v-if="error" class="alert-error">{{ error }}</p>
+              <Transition name="scheme-alert-slide">
+                <p v-if="error" key="drawer-error" class="alert-error">{{ error }}</p>
+              </Transition>
 
               <form class="task-form" @submit.prevent="submitRecipient">
                 <label class="form-field">

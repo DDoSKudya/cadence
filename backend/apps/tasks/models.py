@@ -56,6 +56,13 @@ class Task(models.Model):
         on_delete=models.RESTRICT,
         related_name="tasks",
     )
+    task_status = models.ForeignKey(
+        "boards.TaskStatus",
+        on_delete=models.SET_NULL,
+        related_name="tasks",
+        null=True,
+        blank=True,
+    )
     week = models.ForeignKey(
         "weeks.Week",
         on_delete=models.SET_NULL,

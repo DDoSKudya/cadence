@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from apps.core.models import Tag
 from apps.tasks.models import Task
 from apps.weeks.services import WeekService
 from conftest import close_task_via_api, create_task_via_api
@@ -129,9 +128,9 @@ def test_weeks_ec_close_future_week_rejected(api_client):
 
 @pytest.mark.django_db
 def test_archive_ec_list_filters_by_week_tag_search(
-    api_client, planned_column, week_key
+    api_client, planned_column, week_key, make_tag
 ):
-    Tag.objects.create(name="Focus", slug="focus")
+    make_tag("Focus", slug="focus")
     first = create_task_via_api(
         api_client,
         title="Archived focus task",

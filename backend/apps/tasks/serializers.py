@@ -19,6 +19,8 @@ class BoardPayload(TypedDict):
 
 class TaskBoardSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
+    task_status_id = serializers.IntegerField(read_only=True, allow_null=True)
+    task_status_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -32,12 +34,20 @@ class TaskBoardSerializer(serializers.ModelSerializer):
             "due_at",
             "source",
             "tags",
+            "task_status_id",
+            "task_status_name",
         )
+
+    def get_task_status_name(self, obj: Task) -> str | None:
+        status = obj.task_status
+        return status.name if status is not None else None
 
 
 class TaskSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     week = WeekSerializer(read_only=True)
+    task_status_id = serializers.IntegerField(read_only=True, allow_null=True)
+    task_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -67,6 +77,8 @@ class TaskSerializer(serializers.ModelSerializer):
             "closed_at",
             "archived_at",
             "tags",
+            "task_status_id",
+            "task_status",
         )
         read_only_fields = (
             "id",
@@ -82,7 +94,22 @@ class TaskSerializer(serializers.ModelSerializer):
             "archived_at",
             "next_reminder_at",
             "last_notified_at",
+            "task_status_id",
+            "task_status",
         )
+
+    def get_task_status(self, obj: Task) -> dict[str, object] | None:
+        if obj.task_status_id is None:
+            return None
+        status = obj.task_status
+        if status is None:
+            return None
+        return {
+            "id": status.id,
+            "name": status.name,
+            "slug": status.slug,
+            "color": status.color,
+        }
 
 
 class TaskCreateSerializer(serializers.Serializer):
@@ -123,6 +150,9 @@ class TaskUpdateSerializer(serializers.Serializer):
         required=False,
         allow_null=True,
     )
+    task_status_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True
+    )
 
 
 class TaskMoveSerializer(serializers.Serializer):
@@ -158,9 +188,13 @@ class BoardResponseSerializer(serializers.Serializer):
     week = serializers.SerializerMethodField()
     columns = serializers.SerializerMethodField()
 
-    def get_board(self, payload: BoardPayload) -> dict[str, int | str]:
+    def get_board(self, payload: BoardPayload) -> dict[str, int | str | bool]:
         board = payload["board"]
-        return {"id": board.id, "name": board.name}
+        return {
+            "id": board.id,
+            "name": board.name,
+            "is_default": board.is_default,
+        }
 
     def get_week(self, payload: BoardPayload) -> dict[str, int]:
         week = payload["week"]
@@ -183,6 +217,7 @@ class BoardResponseSerializer(serializers.Serializer):
                     "position": column.position,
                     "color": column.color,
                     "wip_limit": column.wip_limit,
+                    "is_locked": column.is_locked,
                     "tasks": TaskBoardSerializer(tasks, many=True).data,
                 },
             )
