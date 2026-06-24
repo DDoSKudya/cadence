@@ -40,6 +40,12 @@
     <td>Self-hosted Kanban вокруг недельного ритма: доска, импорт, фоновые задания, Telegram, архив и аналитика.</td>
   </tr>
   <tr>
+    <td><strong>Демо</strong></td>
+    <td><a href="https://kudyasoft-cadence.hf.space/">
+    <img alt="Open demo" src="https://img.shields.io/badge/Открыть_демо-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black">
+  </a></td>
+  </tr>
+  <tr>
     <td><strong>Формат</strong></td>
     <td>Модульный монолит: Django apps + Vue SPA, один <code>docker-compose.yml</code> с профилями <code>dev</code> / <code>prod</code>.</td>
   </tr>
@@ -400,6 +406,8 @@ make up
 ```
 
 Чеклист production — [docs/DEVELOPERS.md §14](docs/DEVELOPERS.md#14-production).
+
+Текущий публичный демо-стенд: [Hugging Face Spaces](https://kudyasoft-cadence.hf.space/).
 
 ---
 
