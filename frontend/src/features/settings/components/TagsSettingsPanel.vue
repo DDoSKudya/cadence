@@ -5,6 +5,7 @@ import { ArrowPathIcon, ExclamationTriangleIcon, PlusIcon, TagIcon, TrashIcon, X
 
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import ColumnColorField from "@/features/settings/components/ColumnColorField.vue";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import {
   createSettingsTag,
   deleteSettingsTag,
@@ -15,6 +16,7 @@ import {
 import { colorToHex } from "@/lib/column-color";
 
 const { t } = useI18n();
+const feedback = useActionFeedback();
 
 const tags = ref<SettingsTag[]>([]);
 const loading = ref(true);
@@ -146,6 +148,7 @@ async function submitEditor() {
       const created = await createSettingsTag({ name, color: draftColor.value });
       tags.value = [...tags.value, created];
       closeEditor(true);
+      feedback.successKey("toast.tagCreated");
     } else if (editingTagId.value !== null) {
       const updated = await updateSettingsTag(editingTagId.value, {
         name,
@@ -153,9 +156,10 @@ async function submitEditor() {
       });
       tags.value = tags.value.map((tag) => (tag.id === updated.id ? updated : tag));
       closeEditor(true);
+      feedback.successKey("toast.tagSaved");
     }
   } catch (saveError) {
-    formError.value = saveError instanceof Error ? saveError.message : t("errors.saveTag");
+    feedback.fromError(saveError, "errors.saveTag");
   } finally {
     saving.value = false;
   }
@@ -189,9 +193,9 @@ async function confirmDelete() {
     }
     confirmOpen.value = false;
     pendingDeleteTag.value = null;
+    feedback.successKey("toast.tagDeleted");
   } catch (deleteError) {
-    formError.value =
-      deleteError instanceof Error ? deleteError.message : t("errors.deleteTag");
+    feedback.fromError(deleteError, "errors.deleteTag");
     confirmOpen.value = false;
     pendingDeleteTag.value = null;
   } finally {

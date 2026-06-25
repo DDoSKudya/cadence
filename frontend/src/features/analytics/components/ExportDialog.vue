@@ -9,6 +9,7 @@ import {
   fetchAnalyticsExport,
 } from "@/features/analytics/api";
 import type { AnalyticsFilters, ExportFormat, ExportType } from "@/features/analytics/types";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 const props = defineProps<{
   filters: AnalyticsFilters;
@@ -16,6 +17,7 @@ const props = defineProps<{
 
 const open = defineModel<boolean>("open", { default: false });
 const { t } = useI18n();
+const feedback = useActionFeedback();
 
 const exportType = ref<ExportType>("tasks");
 const fileFormat = ref<ExportFormat>("csv");
@@ -61,6 +63,7 @@ async function pollExport(id: number) {
     if (job.status === "succeeded" || job.status === "failed") {
       if (job.status === "failed") {
         error.value = job.error_message || t("analytics.exportJobFailed");
+        feedback.error(error.value);
       }
       polling.value = false;
       return;
@@ -69,6 +72,7 @@ async function pollExport(id: number) {
   }
   polling.value = false;
   error.value = t("analytics.exportTimeout");
+  feedback.error(error.value);
 }
 
 async function submit() {
@@ -102,8 +106,12 @@ async function submit() {
     exportId.value = job.id;
     exportStatus.value = job.status;
     await pollExport(job.id);
+    if (exportStatus.value === "succeeded") {
+      feedback.successKey("toast.exportReady");
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : t("analytics.exportFailed");
+    feedback.fromError(err, "analytics.exportFailed");
   } finally {
     submitting.value = false;
   }
@@ -117,8 +125,10 @@ async function download() {
   error.value = "";
   try {
     await downloadAnalyticsExport(exportId.value);
+    feedback.successKey("toast.exportDownloaded");
   } catch (err) {
     error.value = err instanceof Error ? err.message : t("analytics.downloadFailed");
+    feedback.fromError(err, "analytics.downloadFailed");
   } finally {
     downloading.value = false;
   }

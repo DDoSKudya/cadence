@@ -2,8 +2,9 @@
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { ArrowRightEndOnRectangleIcon, Squares2X2Icon } from "@heroicons/vue/24/outline";
+import { ArrowRightEndOnRectangleIcon } from "@heroicons/vue/24/outline";
 
+import AppIcon from "@/components/AppIcon.vue";
 import { useAuthStore } from "@/stores/auth";
 
 const router = useRouter();
@@ -36,7 +37,7 @@ async function submit() {
       <div class="mb-6">
         <div class="mb-4 flex items-center gap-3">
           <span class="sidebar-mark">
-            <Squares2X2Icon class="icon-md text-white" />
+            <AppIcon icon-class="sidebar-mark-icon" />
           </span>
           <div>
             <div class="sidebar-title">Cadence</div>

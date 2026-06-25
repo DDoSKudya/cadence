@@ -13,9 +13,11 @@ import {
   priorityLabel,
   type ImportPreview,
 } from "@/features/imports/parse-import";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 const open = defineModel<boolean>("open", { default: false });
 const { t } = useI18n();
+const feedback = useActionFeedback();
 
 const emit = defineEmits<{
   imported: [];
@@ -150,8 +152,11 @@ async function confirmImport() {
 
   if (failedMessages.length > 0) {
     error.value = failedMessages.join("\n");
+    feedback.error(failedMessages.join("\n"));
     return;
   }
+
+  feedback.successKey("toast.importCompleted");
 
   emit("imported");
   resetState();

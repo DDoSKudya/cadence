@@ -1,17 +1,36 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { CalendarDaysIcon, TagIcon } from "@heroicons/vue/24/outline";
 
 import type { BoardTask } from "@/features/board/types";
+import { useBoardStore } from "@/features/board/stores/board";
 import { priorityLabel } from "@/features/board/labels";
+import { columnDotStyle } from "@/lib/column-color";
 import { formatDateTime } from "@/lib/datetime";
 
-defineProps<{
+const props = defineProps<{
   task: BoardTask;
 }>();
 
 defineEmits<{
   open: [taskId: number];
 }>();
+
+const board = useBoardStore();
+
+const taskStatus = computed(() => {
+  const statusId = props.task.task_status_id;
+  if (statusId) {
+    const fromGraph = board.statusGraph.statuses.find((status) => status.id === statusId);
+    if (fromGraph) {
+      return { name: fromGraph.name, color: fromGraph.color };
+    }
+  }
+  if (props.task.task_status_name) {
+    return { name: props.task.task_status_name, color: "slate" };
+  }
+  return null;
+});
 
 const priorityBadgeClass: Record<string, string> = {
   high: "badge-priority-high",
@@ -43,6 +62,11 @@ const priorityAccentClass: Record<string, string> = {
           {{ priorityLabel(task.priority) }}
         </span>
       </div>
+
+      <p v-if="taskStatus" class="task-meta-row mt-2">
+        <span class="task-card-status-dot" :style="columnDotStyle(taskStatus.color)" />
+        {{ taskStatus.name }}
+      </p>
 
       <p v-if="task.due_at" class="task-meta-row mt-2.5">
         <CalendarDaysIcon class="icon-sm" />

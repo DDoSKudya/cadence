@@ -96,10 +96,22 @@ WORKFLOW_TRANSITIONS: tuple[TransitionDef, ...] = (
     ("open", "ready_on_develop", {"required_fields": ["description"]}),
     ("ready_on_develop", "process", {"auto_move_column": True}),
     ("process", "testing", {}),
+    ("process", "done", {"auto_move_column": True}),
     ("testing", "done", {"auto_move_column": True}),
     ("testing", "process", {}),
     ("testing", "ready_on_develop", {}),
 )
+
+
+def workflow_validation_error(
+    message: str,
+    code: str,
+    **extra: Any,
+) -> ValidationError:
+    payload: dict[str, Any] = {"detail": message, "code": code}
+    payload.update(extra)
+    return ValidationError(payload)
+
 
 WORKFLOW_CANCEL_FROM: tuple[str, ...] = (
     "open",
@@ -532,16 +544,16 @@ class TaskStatusService:
         board = task.board
 
         if from_status and from_status.is_terminal:
-            raise ValidationError(
+            raise workflow_validation_error(
                 "Task in a terminal status cannot be moved.",
-                code="status_terminal",
+                "status_terminal",
             )
 
         to_rules = to_status.rules or {}
         if to_rules.get("creation_only") and not is_creation:
-            raise ValidationError(
+            raise workflow_validation_error(
                 "This status can only be assigned when a task is created.",
-                code="status_creation_only",
+                "status_creation_only",
             )
 
         if from_status is None:
@@ -557,9 +569,13 @@ class TaskStatusService:
             from_status_id=from_status.id,
             to_status_id=to_status.id,
         ):
-            raise ValidationError(
+            raise workflow_validation_error(
                 "Task status transition is not allowed.",
-                code="status_transition_not_allowed",
+                "status_transition_not_allowed",
+                from_status=from_status.name,
+                from_status_slug=from_status.slug,
+                to_status=to_status.name,
+                to_status_slug=to_status.slug,
             )
 
         transition = TaskStatusService.get_transition(
@@ -573,25 +589,42 @@ class TaskStatusService:
         required_fields = (transition.rules or {}).get("required_fields", [])
         if not isinstance(required_fields, list):
             required_fields = []
+        missing_fields: list[str] = []
         for field_name in required_fields:
             value = getattr(task, field_name, None)
             if value is None or (isinstance(value, str) and not value.strip()):
-                raise ValidationError(
-                    "Task is missing required fields for this status change.",
-                    code="status_required_fields",
-                )
+                missing_fields.append(str(field_name))
+        if missing_fields:
+            raise workflow_validation_error(
+                "Task is missing required fields for this status change.",
+                "status_required_fields",
+                missing_fields=missing_fields,
+            )
+
+    @staticmethod
+    def _ready_column_status_preference(
+        *,
+        source_column: BoardColumn,
+        target_column: BoardColumn,
+    ) -> str | None:
+        if target_column.system_type != SystemType.READY:
+            return None
+        if source_column.system_type == SystemType.IN_PROGRESS:
+            return "done"
+        return "cancel"
 
     @staticmethod
     def resolve_target_status_for_column(
         *,
         task,
         source_status: TaskStatus | None,
+        source_column: BoardColumn,
         target_column: BoardColumn,
     ) -> TaskStatus | None:
         if source_status and source_status.is_terminal:
-            raise ValidationError(
+            raise workflow_validation_error(
                 "Task in a terminal status cannot be moved.",
-                code="status_terminal",
+                "status_terminal",
             )
 
         candidates = list(
@@ -602,6 +635,26 @@ class TaskStatusService:
         )
         if not candidates:
             return TaskStatusService.resolve_column_status(target_column)
+
+        preferred_slug = TaskStatusService._ready_column_status_preference(
+            source_column=source_column,
+            target_column=target_column,
+        )
+        if preferred_slug is not None:
+            preferred = next(
+                (status for status in candidates if status.slug == preferred_slug),
+                None,
+            )
+            if preferred is not None:
+                try:
+                    TaskStatusService.validate_status_change(
+                        task=task,
+                        from_status=source_status,
+                        to_status=preferred,
+                    )
+                    return preferred
+                except ValidationError:
+                    pass
 
         allowed: list[TaskStatus] = []
         for candidate in candidates:
@@ -621,13 +674,42 @@ class TaskStatusService:
         if len(allowed) == 1:
             return allowed[0]
 
-        allowed.sort(
-            key=lambda status: (
-                status.slug == "cancel",
-                status.position,
-            ),
-        )
+        if preferred_slug == "done":
+            allowed.sort(key=lambda status: (status.slug != "done", status.position))
+        elif preferred_slug == "cancel":
+            allowed.sort(key=lambda status: (status.slug != "cancel", status.position))
+        else:
+            allowed.sort(
+                key=lambda status: (
+                    status.slug == "cancel",
+                    status.position,
+                ),
+            )
         return allowed[0]
+
+    @staticmethod
+    def can_move_between_columns_via_status(
+        *,
+        task,
+        source_column: BoardColumn,
+        target_column: BoardColumn,
+    ) -> bool:
+        if source_column.id == target_column.id:
+            return True
+
+        source_status = task.task_status
+        if source_status is None:
+            source_status = TaskStatusService.resolve_column_status(source_column)
+
+        return (
+            TaskStatusService.resolve_target_status_for_column(
+                task=task,
+                source_status=source_status,
+                source_column=source_column,
+                target_column=target_column,
+            )
+            is not None
+        )
 
     @staticmethod
     def resolve_column_status(column: BoardColumn) -> TaskStatus | None:

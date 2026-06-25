@@ -13,6 +13,7 @@ import { Background } from "@vue-flow/background";
 import { Controls } from "@vue-flow/controls";
 
 import { saveTaskStatusGraph, saveTaskStatusLayout } from "@/features/settings/api";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import type { SettingsColumn } from "@/features/settings/types";
 import type {
   TaskStatusGraph,
@@ -71,6 +72,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const feedback = useActionFeedback();
 const structureLocked = computed(() => props.readOnly ?? false);
 const saving = ref(false);
 const layoutSaving = ref(false);
@@ -647,8 +649,7 @@ async function persistLayout() {
       layoutSaved.value = false;
     }, 1800);
   } catch (saveError) {
-    layoutError.value =
-      saveError instanceof Error ? saveError.message : t("errors.saveStatusWorkflow");
+    feedback.fromError(saveError, "errors.saveStatusWorkflow");
   } finally {
     layoutSaving.value = false;
   }
@@ -698,9 +699,9 @@ async function persistGraph() {
     const saved = await saveTaskStatusGraph(buildPayload());
     emit("saved", saved);
     syncFromGraph(saved);
+    feedback.successKey("toast.statusWorkflowSaved");
   } catch (saveError) {
-    formError.value =
-      saveError instanceof Error ? saveError.message : t("errors.saveStatusWorkflow");
+    feedback.fromError(saveError, "errors.saveStatusWorkflow");
   } finally {
     saving.value = false;
   }

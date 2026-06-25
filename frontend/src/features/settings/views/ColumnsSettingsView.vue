@@ -34,6 +34,7 @@ import type { BoardScheme, SettingsColumn } from "@/features/settings/types";
 import type { TaskStatusGraph } from "@/features/settings/task-status-graph";
 import type { ColumnWorkflow } from "@/features/settings/workflow";
 import { columnDotStyle } from "@/lib/column-color";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import { useBoardStore } from "@/features/board/stores/board";
 
 const StatusFlowEditor = defineAsyncComponent(
@@ -44,6 +45,7 @@ type ColumnsTab = "columns" | "workflow" | "statuses" | "tags";
 const COLUMNS_TABS: ColumnsTab[] = ["columns", "workflow", "statuses", "tags"];
 
 const { t } = useI18n();
+const feedback = useActionFeedback();
 const route = useRoute();
 const router = useRouter();
 const boardStore = useBoardStore();
@@ -269,9 +271,9 @@ async function applySchemeDelete(slug: string) {
     await loadColumns();
     schemeCreateShow.value = false;
     panelShow.value = false;
+    feedback.successKey("toast.schemeDeleted");
   } catch (deleteError) {
-    error.value =
-      deleteError instanceof Error ? deleteError.message : t("errors.deleteScheme");
+    feedback.fromError(deleteError, "errors.deleteScheme");
   } finally {
     switchingScheme.value = false;
   }
@@ -284,9 +286,9 @@ async function applySchemeSwitch(slug: string) {
     const result = await switchBoardScheme(slug);
     applySchemeResult(result);
     schemeCreateShow.value = false;
+    feedback.successKey("toast.schemeSwitched");
   } catch (switchError) {
-    error.value =
-      switchError instanceof Error ? switchError.message : t("errors.switchScheme");
+    feedback.fromError(switchError, "errors.switchScheme");
   } finally {
     switchingScheme.value = false;
   }
@@ -348,9 +350,9 @@ async function persistOrder() {
   try {
     columns.value = await reorderColumns(nextOrder);
     syncDisplayColumns();
+    feedback.successKey("toast.columnsReordered");
   } catch (reorderError) {
-    error.value =
-      reorderError instanceof Error ? reorderError.message : t("errors.reorderColumns");
+    feedback.fromError(reorderError, "errors.reorderColumns");
     syncDisplayColumns();
   } finally {
     reordering.value = false;
@@ -526,14 +528,15 @@ onMounted(loadColumns);
                 @delete="onSchemeDelete"
               />
 
-              <Transition name="scheme-collapse">
-                <SchemeCreatePanel
-                  v-if="schemeCreateShow"
-                  :disabled="!canCreateScheme"
-                  :disabled-title="schemeLimitTitle"
-                  @created="onSchemeCreated"
-                  @cancel="closeSchemeCreate"
-                />
+              <Transition name="notify-fold-collapse">
+                <div v-if="schemeCreateShow" key="scheme-create" class="columns-scheme-create-shell">
+                  <SchemeCreatePanel
+                    :disabled="!canCreateScheme"
+                    :disabled-title="schemeLimitTitle"
+                    @created="onSchemeCreated"
+                    @cancel="closeSchemeCreate"
+                  />
+                </div>
               </Transition>
 
               <p v-if="displayColumns.length" class="columns-order-hint">{{ $t("settings.columnsOrderHint") }}</p>

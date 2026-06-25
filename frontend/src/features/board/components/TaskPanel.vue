@@ -18,13 +18,16 @@ import {
   allowedStatusTargets,
   findInitialStatus,
 } from "@/features/board/task-status";
+import { isTerminalBoardColumn } from "@/features/board/columns";
 import type { TaskDetail } from "@/features/board/types";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import { columnDotStyle } from "@/lib/column-color";
 import { columnDisplayName } from "@/lib/column-display";
 import { fromLocalInput, toLocalInput } from "@/lib/task-form";
 
 const board = useBoardStore();
 const { t } = useI18n();
+const feedback = useActionFeedback();
 
 const task = ref<TaskDetail | null>(null);
 const loading = ref(false);
@@ -85,6 +88,13 @@ const statusLocked = computed(() => {
   return Boolean(current?.is_terminal);
 });
 
+const canCloseTask = computed(() => {
+  if (!task.value || isClosed.value) {
+    return false;
+  }
+  return isTerminalBoardColumn(task.value.column_id, board.sortedColumns);
+});
+
 function resetCreateForm() {
   task.value = null;
   formError.value = "";
@@ -119,8 +129,7 @@ async function loadTask(taskId: number) {
     task.value = loaded;
     syncForm(loaded);
   } catch (loadError) {
-    formError.value =
-      loadError instanceof Error ? loadError.message : t("board.loadFailed");
+    feedback.fromError(loadError, "board.loadFailed");
     task.value = null;
   } finally {
     loading.value = false;
@@ -210,8 +219,7 @@ async function submitCreate() {
     });
     closePanel();
   } catch (saveError) {
-    formError.value =
-      saveError instanceof Error ? saveError.message : t("board.createFailed");
+    feedback.fromError(saveError, "board.createFailed");
   } finally {
     saving.value = false;
   }
@@ -237,9 +245,9 @@ async function saveTask() {
     });
     closePanel();
     await board.refreshAfterDrawer();
+    feedback.successKey("toast.taskUpdated");
   } catch (saveError) {
-    formError.value =
-      saveError instanceof Error ? saveError.message : t("board.saveFailed");
+    feedback.fromError(saveError, "board.saveFailed");
   } finally {
     saving.value = false;
   }
@@ -255,9 +263,9 @@ async function closeTaskAction() {
     await boardApi.closeTask(task.value.id, "", evidenceUrl.value.trim() || undefined);
     closePanel();
     await board.refreshAfterDrawer();
+    feedback.successKey("toast.taskClosed");
   } catch (closeError) {
-    formError.value =
-      closeError instanceof Error ? closeError.message : t("board.closeFailed");
+    feedback.fromError(closeError, "board.closeFailed");
   } finally {
     closing.value = false;
   }
@@ -452,7 +460,7 @@ async function closeTaskAction() {
               {{ saving ? $t("common.saving") : $t("common.save") }}
             </button>
             <button
-              v-if="!isClosed"
+              v-if="canCloseTask"
               class="btn-accent px-4 py-2 text-sm disabled:opacity-60"
               :disabled="closing"
               type="button"

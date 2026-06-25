@@ -8,21 +8,21 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   GlobeAltIcon,
-  Squares2X2Icon,
   ViewColumnsIcon,
 } from "@heroicons/vue/24/outline";
 
+import AppIcon from "@/components/AppIcon.vue";
 import { useAuthStore } from "@/stores/auth";
 
 export default defineComponent({
   components: {
+    AppIcon,
     ArchiveBoxIcon,
     ArrowLeftStartOnRectangleIcon,
     BellAlertIcon,
     ChartBarIcon,
     Cog6ToothIcon,
     GlobeAltIcon,
-    Squares2X2Icon,
     ViewColumnsIcon,
   },
   setup() {
@@ -68,7 +68,7 @@ export default defineComponent({
     <aside class="sidebar">
       <div class="sidebar-brand">
         <span class="sidebar-mark">
-          <Squares2X2Icon class="icon-md text-white" />
+          <AppIcon icon-class="sidebar-mark-icon" />
         </span>
         <div>
           <div class="sidebar-title">Cadence</div>

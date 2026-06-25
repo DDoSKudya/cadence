@@ -30,6 +30,7 @@ vi.mock("@/features/settings/project-api", async (importOriginal) => {
   return {
     ...actual,
     fetchNotificationSettings: vi.fn(),
+    saveNotificationSettings: vi.fn(),
     checkTelegramBot: vi.fn(),
   };
 });
@@ -56,6 +57,7 @@ function mountView() {
 describe("NotificationsSettingsView", () => {
   beforeEach(() => {
     vi.mocked(projectApi.fetchNotificationSettings).mockReset();
+    vi.mocked(projectApi.saveNotificationSettings).mockReset();
     vi.mocked(projectApi.checkTelegramBot).mockReset();
   });
 
@@ -92,5 +94,23 @@ describe("NotificationsSettingsView", () => {
 
     expect(document.querySelector(".drawer-panel")).toBeTruthy();
     expect(document.body.textContent).toContain("New recipient");
+  });
+
+  it("saves telegram toggle immediately without save bar", async () => {
+    vi.mocked(projectApi.fetchNotificationSettings).mockResolvedValue(baseForm);
+    vi.mocked(projectApi.saveNotificationSettings).mockResolvedValue({
+      ...baseForm,
+      telegram_enabled: true,
+    });
+
+    const wrapper = mountView();
+    await flushPromises();
+
+    const toggle = wrapper.get(".notify-switch input");
+    await toggle.setValue(true);
+    await flushPromises();
+
+    expect(projectApi.saveNotificationSettings).toHaveBeenCalledWith({ telegram_enabled: true });
+    expect(wrapper.find(".board-toolbar-actions").exists()).toBe(false);
   });
 });

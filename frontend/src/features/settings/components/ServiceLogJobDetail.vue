@@ -20,6 +20,7 @@ import {
 } from "@/features/jobs/job-display";
 import { formatDateTime } from "@/lib/datetime";
 import { useToastStore } from "@/stores/toast";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 const props = defineProps<{
   jobId: number;
@@ -27,6 +28,7 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const toast = useToastStore();
+const feedback = useActionFeedback();
 
 const job = ref<BackgroundJob | null>(null);
 const loading = ref(true);
@@ -56,10 +58,9 @@ async function retryJobAction() {
   acting.value = true;
   try {
     job.value = await retryJob(job.value.id);
-    toast.success(t("jobs.retried"));
+    toast.success(t("toast.jobRetried"));
   } catch (retryError) {
-    error.value =
-      retryError instanceof Error ? retryError.message : t("errors.retryJob");
+    feedback.fromError(retryError, "errors.retryJob");
   } finally {
     acting.value = false;
   }
@@ -72,10 +73,9 @@ async function cancelJobAction() {
   acting.value = true;
   try {
     job.value = await cancelJob(job.value.id);
-    toast.success(t("jobs.cancelled"));
+    toast.success(t("toast.jobCancelled"));
   } catch (cancelError) {
-    error.value =
-      cancelError instanceof Error ? cancelError.message : t("errors.cancelJob");
+    feedback.fromError(cancelError, "errors.cancelJob");
   } finally {
     acting.value = false;
   }

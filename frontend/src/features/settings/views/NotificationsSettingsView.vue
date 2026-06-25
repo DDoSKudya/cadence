@@ -30,12 +30,15 @@ import {
 } from "@/features/settings/project-api";
 import { formatDateTime } from "@/lib/datetime";
 import { useToastStore } from "@/stores/toast";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 const { t } = useI18n();
 const toast = useToastStore();
+const feedback = useActionFeedback();
 const loading = ref(true);
 const loadFailed = ref(false);
 const saving = ref(false);
+const togglingTelegram = ref(false);
 const botChecking = ref(false);
 const error = ref("");
 const form = ref<NotificationSettingsForm | null>(null);
@@ -282,6 +285,45 @@ function discardChanges() {
   error.value = "";
 }
 
+async function onTelegramToggle(event: Event) {
+  if (!form.value || togglingTelegram.value) {
+    return;
+  }
+
+  const input = event.target as HTMLInputElement;
+  const enabled = input.checked;
+  const previous = form.value.telegram_enabled;
+  if (enabled === previous) {
+    return;
+  }
+
+  form.value.telegram_enabled = enabled;
+  togglingTelegram.value = true;
+  error.value = "";
+
+  try {
+    const updated = await saveNotificationSettings({ telegram_enabled: enabled });
+    form.value = updated;
+    savedForm.value = cloneNotificationSettings(updated);
+    feedback.successKey(enabled ? "toast.telegramEnabled" : "toast.telegramDisabled");
+
+    if (enabled) {
+      if (telegramSetupIssues.value.length > 0) {
+        openTelegram.value = true;
+      }
+      if (updated.telegram_bot_token_set) {
+        void runBotCheck({ silent: true });
+      }
+    }
+  } catch (saveError) {
+    form.value.telegram_enabled = previous;
+    input.checked = previous;
+    feedback.fromError(saveError, "errors.saveSettings");
+  } finally {
+    togglingTelegram.value = false;
+  }
+}
+
 async function saveSettings() {
   if (!form.value) {
     return;
@@ -314,26 +356,13 @@ async function saveSettings() {
     form.value = updated;
     savedForm.value = cloneNotificationSettings(updated);
     botTokenInput.value = "";
-    toast.success(t("common.saved"));
+    toast.success(t("toast.settingsSaved"));
   } catch (saveError) {
-    error.value =
-      saveError instanceof Error ? saveError.message : t("errors.saveSettings");
+    feedback.fromError(saveError, "errors.saveSettings");
   } finally {
     saving.value = false;
   }
 }
-
-watch(
-  () => form.value?.telegram_enabled,
-  (enabled) => {
-    if (enabled) {
-      if (telegramSetupIssues.value.length > 0) {
-        openTelegram.value = true;
-      }
-      void runBotCheck({ silent: true });
-    }
-  },
-);
 
 watch(hasBotToken, (hasToken) => {
   if (hasToken && form.value?.telegram_enabled) {
@@ -499,7 +528,12 @@ onMounted(loadSettings);
                   </span>
                 </span>
                 <label class="notify-switch" :title="$t('common.enabled')" @click.stop>
-                  <input v-model="form.telegram_enabled" type="checkbox" />
+                  <input
+                    :checked="form.telegram_enabled"
+                    type="checkbox"
+                    :disabled="togglingTelegram || saving"
+                    @change="onTelegramToggle"
+                  />
                   <span class="notify-switch-track" aria-hidden="true">
                     <span class="notify-switch-thumb" />
                   </span>

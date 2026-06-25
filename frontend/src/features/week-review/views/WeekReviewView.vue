@@ -17,11 +17,13 @@ import {
 import type { WeekReviewResponse } from "@/features/week-review/types";
 import { weekLabel } from "@/lib/week";
 import { useToastStore } from "@/stores/toast";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const toast = useToastStore();
+const feedback = useActionFeedback();
 
 const loading = ref(true);
 const saving = ref(false);
@@ -97,10 +99,9 @@ async function saveNotes() {
       ...review.value,
       week: { ...review.value.week, ...updatedWeek },
     };
-    toast.success(t("common.saved"));
+    toast.success(t("toast.weekSaved"));
   } catch (saveError) {
-    error.value =
-      saveError instanceof Error ? saveError.message : t("weekReview.saveFailed");
+    feedback.fromError(saveError, "weekReview.saveFailed");
   } finally {
     saving.value = false;
   }
@@ -147,8 +148,7 @@ async function closeWeekAction() {
         : t("weekReview.weekClosed"),
     );
   } catch (closeError) {
-    error.value =
-      closeError instanceof Error ? closeError.message : t("weekReview.closeFailed");
+    feedback.fromError(closeError, "weekReview.closeFailed");
   } finally {
     closing.value = false;
   }

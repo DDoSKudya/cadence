@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import { createBoardScheme } from "@/features/settings/api";
 
 const props = defineProps<{
@@ -17,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const feedback = useActionFeedback();
 const name = ref("");
 const description = ref("");
 const saving = ref(false);
@@ -51,10 +53,10 @@ async function confirmCreate() {
       switch: false,
     });
     confirmOpen.value = false;
+    feedback.successKey("toast.schemeCreated");
     emit("created");
   } catch (createError) {
-    formError.value =
-      createError instanceof Error ? createError.message : t("errors.createScheme");
+    feedback.fromError(createError, "errors.createScheme");
     confirmOpen.value = false;
   } finally {
     saving.value = false;
@@ -67,7 +69,9 @@ async function confirmCreate() {
     <h3 class="columns-scheme-create-title">{{ $t("settings.newScheme") }}</h3>
     <p class="columns-scheme-create-hint">{{ $t("settings.schemeCreateHint") }}</p>
 
-    <p v-if="formError" class="alert-error">{{ formError }}</p>
+    <Transition name="scheme-alert-slide">
+      <p v-if="formError" key="form-error" class="alert-error">{{ formError }}</p>
+    </Transition>
 
     <form class="columns-scheme-create-form" @submit.prevent="requestSubmit">
       <label class="form-field">

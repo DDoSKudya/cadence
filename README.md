@@ -1,20 +1,19 @@
 <div align="center">
 
-<br>
-
-# Cadence
-
-<p>
-  <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
-</p>
-
-<p>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-111827?style=flat-square"></a>
-  <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
-  <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
-  <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-16A34A?style=flat-square"></a>
-</p>
+<div align="center">
+  <img src="docs/cadence-icon.png" alt="Cadence" width="96" height="96">
+  <h1><b>Cadence</b></h1>
+  <p>
+    <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
+  </p>
+  <p>
+    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-111827?style=flat-square"></a>
+    <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
+    <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
+    <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-16A34A?style=flat-square"></a>
+  </p>
+</div>
 
 <p>
   <a href="#быстрый-старт">Быстрый старт</a>
@@ -160,15 +159,15 @@ cd frontend && npm install && cd ..
 
 Полный список — [`.env.example`](.env.example). Подробнее — в [docs/DEVELOPERS.md §11](docs/DEVELOPERS.md#11-настройки-и-переменные-окружения).
 
-| Переменная | Зачем |
-| ---------- | ----- |
-| `DJANGO_SECRET_KEY` | секрет Django; в production — сильное случайное значение |
-| `DJANGO_DEBUG` | `true` в dev, `false` в prod (`make up`) |
-| `DATABASE_URL` | PostgreSQL; по умолчанию `postgres://cadence:cadence@postgres:5432/cadence` |
-| `CELERY_BROKER_URL` | RabbitMQ для Celery |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ENABLED` | опциональный бот и напоминания |
-| `CADENCE_TIME_ZONE` | таймзона проекта (rollover, quiet hours), по умолчанию `Europe/Moscow` |
-| `CSRF_TRUSTED_ORIGINS` | origins SPA для CSRF, например `http://localhost:8080` |
+| Переменная                               | Зачем                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------- |
+| `DJANGO_SECRET_KEY`                      | секрет Django; в production — сильное случайное значение                    |
+| `DJANGO_DEBUG`                           | `true` в dev, `false` в prod (`make up`)                                    |
+| `DATABASE_URL`                           | PostgreSQL; по умолчанию `postgres://cadence:cadence@postgres:5432/cadence` |
+| `CELERY_BROKER_URL`                      | RabbitMQ для Celery                                                         |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ENABLED` | опциональный бот и напоминания                                              |
+| `CADENCE_TIME_ZONE`                      | таймзона проекта (rollover, quiet hours), по умолчанию `Europe/Moscow`      |
+| `CSRF_TRUSTED_ORIGINS`                   | origins SPA для CSRF, например `http://localhost:8080`                      |
 
 ### Качество кода
 
@@ -218,14 +217,14 @@ CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и p
 
 ## Возможности
 
-| Область | Что умеет |
-| ------- | --------- |
-| **Доска** | Kanban, DnD, drawer задачи, теги, приоритеты, ISO-недели |
-| **Workflow** | схемы досок, граф статусов, правила переходов колонок |
-| **Ввод** | UI, REST API (API key), JSON inbox, Telegram callbacks |
-| **Фон** | Celery jobs с retry/cancel, Flower, service logs |
-| **Обзор** | архив, week review, аналитика, экспорт CSV/XLSX |
-| **i18n** | интерфейс RU / EN |
+| Область      | Что умеет                                                |
+| ------------ | -------------------------------------------------------- |
+| **Доска**    | Kanban, DnD, drawer задачи, теги, приоритеты, ISO-недели |
+| **Workflow** | схемы досок, граф статусов, правила переходов колонок    |
+| **Ввод**     | UI, REST API (API key), JSON inbox, Telegram callbacks   |
+| **Фон**      | Celery jobs с retry/cancel, Flower, service logs         |
+| **Обзор**    | архив, week review, аналитика, экспорт CSV/XLSX          |
+| **i18n**     | интерфейс RU / EN                                        |
 
 Подробные потоки данных — в [docs/DEVELOPERS.md §6](docs/DEVELOPERS.md#6-потоки-данных).
 
@@ -235,17 +234,17 @@ CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и p
 
 Проект — модульный монолит: доменные Django apps + Vue feature-модули.
 
-| App | Назначение |
-| --- | ---------- |
-| `boards` | доска, схемы, колонки, граф статусов |
-| `tasks` | CRUD, move, close, события |
-| `weeks` | ISO-недели, review, rollover |
-| `imports` | JSON inbox с идемпотентностью |
-| `jobs` | учёт фоновых заданий |
-| `notifications` | Telegram-напоминания и callbacks |
-| `analytics` | дашборды и экспорт |
-| `archive` | read-only архив задач |
-| `core` | auth, settings, tags, platform |
+| App             | Назначение                           |
+| --------------- | ------------------------------------ |
+| `boards`        | доска, схемы, колонки, граф статусов |
+| `tasks`         | CRUD, move, close, события           |
+| `weeks`         | ISO-недели, review, rollover         |
+| `imports`       | JSON inbox с идемпотентностью        |
+| `jobs`          | учёт фоновых заданий                 |
+| `notifications` | Telegram-напоминания и callbacks     |
+| `analytics`     | дашборды и экспорт                   |
+| `archive`       | read-only архив задач                |
+| `core`          | auth, settings, tags, platform       |
 
 ```text
 cadence/
@@ -317,27 +316,27 @@ nginx маршрутизирует `/` во frontend, `/api/` и `/admin/` в ba
 
 База: `/api/v1/` через nginx (`http://localhost:8080/api/v1/…`).
 
-| Метод | Путь | Описание |
-| ----- | ---- | -------- |
-| `GET` | `/api/health/` | health check |
-| `POST` | `/api/v1/auth/login/` | вход (session) |
-| `GET` | `/api/v1/board/` | payload доски |
-| `GET\|POST` | `/api/v1/tasks/` | список / создание |
-| `POST` | `/api/v1/tasks/<id>/move/` | перемещение |
-| `POST` | `/api/v1/tasks/<id>/close/` | закрытие / архив |
-| `POST` | `/api/v1/imports/upload/` | загрузка JSON |
-| `GET` | `/api/v1/jobs/` | фоновые задания |
-| `GET` | `/api/v1/analytics/summary/` | сводка аналитики |
-| `GET\|POST` | `/api/v1/analytics/exports/` | экспорт CSV/XLSX |
+| Метод       | Путь                         | Описание          |
+| ----------- | ---------------------------- | ----------------- |
+| `GET`       | `/api/health/`               | health check      |
+| `POST`      | `/api/v1/auth/login/`        | вход (session)    |
+| `GET`       | `/api/v1/board/`             | payload доски     |
+| `GET\|POST` | `/api/v1/tasks/`             | список / создание |
+| `POST`      | `/api/v1/tasks/<id>/move/`   | перемещение       |
+| `POST`      | `/api/v1/tasks/<id>/close/`  | закрытие / архив  |
+| `POST`      | `/api/v1/imports/upload/`    | загрузка JSON     |
+| `GET`       | `/api/v1/jobs/`              | фоновые задания   |
+| `GET`       | `/api/v1/analytics/summary/` | сводка аналитики  |
+| `GET\|POST` | `/api/v1/analytics/exports/` | экспорт CSV/XLSX  |
 
 Документация: [`/api/docs/`](http://localhost:8080/api/docs/) · снимок схемы: [`docs/openapi.json`](docs/openapi.json).
 
 ### Аутентификация
 
-| Механизм | Заголовок / способ | Сценарий |
-| -------- | ------------------ | -------- |
-| **Session** | cookie после `POST /auth/login/` | браузер, SPA |
-| **API key** | `Authorization: Api-Key cd_…` | скрипты, внешние интеграции |
+| Механизм    | Заголовок / способ               | Сценарий                    |
+| ----------- | -------------------------------- | --------------------------- |
+| **Session** | cookie после `POST /auth/login/` | браузер, SPA                |
+| **API key** | `Authorization: Api-Key cd_…`    | скрипты, внешние интеграции |
 
 Ключи выпускаются в Django Admin (`ApiKey.issue()`).
 
@@ -361,13 +360,13 @@ curl -X POST http://localhost:8080/api/v1/tasks/ \
 
 ## Данные и логи
 
-| Путь | Что хранится |
-| ---- | ------------ |
-| `postgres_data` (volume) | задачи, доски, недели, jobs, notifications |
-| `data/task-inbox/pending/` | входящие JSON для импорта |
-| `data/task-inbox/processed/` | успешно обработанные файлы |
-| `media/exports/` | сгенерированные CSV/XLSX |
-| `logs/api.log`, `logs/worker.log` | service logs (`CADENCE_LOG_DIR`) |
+| Путь                              | Что хранится                               |
+| --------------------------------- | ------------------------------------------ |
+| `postgres_data` (volume)          | задачи, доски, недели, jobs, notifications |
+| `data/task-inbox/pending/`        | входящие JSON для импорта                  |
+| `data/task-inbox/processed/`      | успешно обработанные файлы                 |
+| `media/exports/`                  | сгенерированные CSV/XLSX                   |
+| `logs/api.log`, `logs/worker.log` | service logs (`CADENCE_LOG_DIR`)           |
 
 В UI: **Настройки → Общие → Service logs**. В dev доступен Flower на `:5556`.
 
@@ -379,10 +378,10 @@ curl -X POST http://localhost:8080/api/v1/tasks/ \
 make test
 ```
 
-| Слой | Инструмент | Покрытие |
-| ---- | ---------- | -------- |
-| Backend | pytest, ruff, mypy | ≥85% coverage (`apps/`), EC-тесты в `backend/tests/` |
-| Frontend | vue-tsc, Vitest | 17 spec-файлов, `npm run build` |
+| Слой     | Инструмент         | Покрытие                                             |
+| -------- | ------------------ | ---------------------------------------------------- |
+| Backend  | pytest, ruff, mypy | ≥85% coverage (`apps/`), EC-тесты в `backend/tests/` |
+| Frontend | vue-tsc, Vitest    | 17 spec-файлов, `npm run build`                      |
 
 Отдельно:
 
@@ -413,12 +412,12 @@ make up
 
 ## Документация
 
-| Тема | Файл |
-| ---- | ---- |
+| Тема                                         | Файл                                     |
+| -------------------------------------------- | ---------------------------------------- |
 | Архитектура, apps, потоки данных, разработка | [docs/DEVELOPERS.md](docs/DEVELOPERS.md) |
-| История изменений | [CHANGELOG.md](CHANGELOG.md) |
-| OpenAPI snapshot | [docs/openapi.json](docs/openapi.json) |
-| Переменные окружения | [.env.example](.env.example) |
+| История изменений                            | [CHANGELOG.md](CHANGELOG.md)             |
+| OpenAPI snapshot                             | [docs/openapi.json](docs/openapi.json)   |
+| Переменные окружения                         | [.env.example](.env.example)             |
 
 ---
 
