@@ -283,14 +283,22 @@ class TaskStatusChangeService:
             target_column = target_status.column
             if target_column is None or not target_column.is_active:
                 raise ValidationError("Target column is invalid.")
-            if not ColumnWorkflowService.is_move_allowed(
+            column_move_ok = ColumnWorkflowService.is_move_allowed(
                 board=task.board,
                 from_column_id=source_column.id,
                 to_column_id=target_column.id,
-            ):
+            )
+            status_move_ok = TaskStatusService.is_transition_allowed(
+                board=task.board,
+                from_status_id=source_status.id if source_status else None,
+                to_status_id=target_status.id,
+            )
+            if not column_move_ok and not status_move_ok:
                 raise ValidationError(
-                    "Transition from this column is not allowed.",
-                    code="transition_not_allowed",
+                    {
+                        "detail": "Transition from this column is not allowed.",
+                        "code": "transition_not_allowed",
+                    },
                 )
             target_position = TaskCreationService._next_position(target_column)
             TaskMoveService._move_between_columns(
@@ -383,10 +391,16 @@ class TaskMoveService:
                 board=task.board,
                 from_column_id=source_column.id,
                 to_column_id=target_column.id,
+            ) and not TaskStatusService.can_move_between_columns_via_status(
+                task=task,
+                source_column=source_column,
+                target_column=target_column,
             ):
                 raise ValidationError(
-                    "Transition from this column is not allowed.",
-                    code="transition_not_allowed",
+                    {
+                        "detail": "Transition from this column is not allowed.",
+                        "code": "transition_not_allowed",
+                    },
                 )
             if source_status is None:
                 source_status = TaskStatusService.resolve_column_status(source_column)
@@ -394,12 +408,22 @@ class TaskMoveService:
             target_status = TaskStatusService.resolve_target_status_for_column(
                 task=task,
                 source_status=source_status,
+                source_column=source_column,
                 target_column=target_column,
             )
             if target_status is None:
                 raise ValidationError(
-                    "Task status transition is not allowed.",
-                    code="status_transition_not_allowed",
+                    {
+                        "detail": (
+                            "Task cannot be moved to this column "
+                            "with the current status."
+                        ),
+                        "code": "status_column_move_not_allowed",
+                        "from_status": source_status.name if source_status else "",
+                        "from_status_slug": source_status.slug if source_status else "",
+                        "to_column": target_column.name,
+                        "to_column_type": target_column.system_type,
+                    },
                 )
 
             TaskStatusService.validate_status_change(

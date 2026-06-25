@@ -94,6 +94,27 @@ def test_tasks_ec_move_between_columns_updates_column(
 
 
 @pytest.mark.django_db
+def test_tasks_ec_move_open_to_in_progress_rejected_with_status_error(
+    api_client, planned_column, in_progress_column
+):
+    created = create_task_via_api(
+        api_client,
+        title="Open in backlog",
+        column_id=planned_column.id,
+    )
+    response = api_client.post(
+        reverse("task-move", args=[created.json()["id"]]),
+        {"target_column_id": in_progress_column.id, "target_position": 0},
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["code"] == "status_column_move_not_allowed"
+    assert payload["from_status"]
+    assert payload["to_column"]
+
+
+@pytest.mark.django_db
 def test_tasks_ec_move_rejected_when_transition_not_allowed(
     api_client, planned_column, in_progress_column, ready_column
 ):
@@ -103,12 +124,17 @@ def test_tasks_ec_move_rejected_when_transition_not_allowed(
         column_id=planned_column.id,
         description="Filled description",
     )
-    blocked_ready = api_client.post(
+    allowed_cancel = api_client.post(
         reverse("task-move", args=[created.json()["id"]]),
         {"target_column_id": ready_column.id, "target_position": 0},
         content_type="application/json",
     )
-    assert blocked_ready.status_code == 400
+    assert allowed_cancel.status_code == 200
+    assert allowed_cancel.json()["column_id"] == ready_column.id
+    from apps.boards.models import TaskStatus
+
+    cancel_status = TaskStatus.objects.get(slug="cancel")
+    assert allowed_cancel.json()["task_status_id"] == cancel_status.id
 
     blocked_wip = api_client.post(
         reverse("task-move", args=[created.json()["id"]]),
@@ -116,6 +142,60 @@ def test_tasks_ec_move_rejected_when_transition_not_allowed(
         content_type="application/json",
     )
     assert blocked_wip.status_code == 400
+
+
+@pytest.mark.django_db
+def test_tasks_ec_move_in_progress_to_ready_uses_done_status(
+    api_client, planned_column, in_progress_column, ready_column
+):
+    from apps.boards.models import TaskStatus
+    from apps.tasks.models import Task
+
+    created = create_task_via_api(
+        api_client,
+        title="Finish from wip",
+        column_id=planned_column.id,
+        description="Ready for development",
+    )
+    task = Task.objects.get(pk=created.json()["id"])
+    process_status = TaskStatus.objects.get(board=task.board, slug="process")
+    task.task_status = process_status
+    task.column = in_progress_column
+    task.save(update_fields=["task_status", "column", "updated_at"])
+
+    moved = api_client.post(
+        reverse("task-move", args=[task.id]),
+        {"target_column_id": ready_column.id, "target_position": 0},
+        content_type="application/json",
+    )
+    assert moved.status_code == 200
+    done_status = TaskStatus.objects.get(board=task.board, slug="done")
+    assert moved.json()["task_status_id"] == done_status.id
+    assert moved.json()["column_id"] == ready_column.id
+
+
+@pytest.mark.django_db
+def test_tasks_ec_status_change_open_to_cancel_succeeds(
+    api_client, planned_column, ready_column
+):
+    from apps.boards.models import TaskStatus
+
+    created = create_task_via_api(
+        api_client,
+        title="Cancel me",
+        column_id=planned_column.id,
+    )
+    task_id = created.json()["id"]
+    cancel_status = TaskStatus.objects.get(slug="cancel")
+
+    updated = api_client.patch(
+        reverse("task-detail", args=[task_id]),
+        {"task_status_id": cancel_status.id},
+        content_type="application/json",
+    )
+    assert updated.status_code == 200
+    assert updated.json()["task_status_id"] == cancel_status.id
+    assert updated.json()["column_id"] == ready_column.id
 
 
 @pytest.mark.django_db

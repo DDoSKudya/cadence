@@ -221,6 +221,10 @@
   color: var(--color-text-secondary);
 }
 
+.columns-scheme-create-shell {
+  overflow: hidden;
+}
+
 .columns-scheme-create {
   display: flex;
   flex-direction: column;

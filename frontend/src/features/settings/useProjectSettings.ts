@@ -11,11 +11,13 @@ import {
 import type { AppLocale } from "@/features/settings/project-api";
 import { useLocaleStore } from "@/stores/locale";
 import { useToastStore } from "@/stores/toast";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 export function useProjectSettings() {
   const { t } = useI18n();
   const localeStore = useLocaleStore();
   const toast = useToastStore();
+  const feedback = useActionFeedback();
 
   const loading = ref(true);
   const loadFailed = ref(false);
@@ -44,7 +46,7 @@ export function useProjectSettings() {
     }
   }
 
-  function flashNotice(message = t("common.saved")) {
+  function flashNotice(message = t("toast.settingsSaved")) {
     toast.success(message);
   }
 
@@ -65,8 +67,7 @@ export function useProjectSettings() {
       flashNotice(options?.notice);
       return true;
     } catch (saveError) {
-      error.value =
-        saveError instanceof Error ? saveError.message : t("errors.saveSettings");
+      feedback.fromError(saveError, "errors.saveSettings");
       return false;
     } finally {
       saving.value = false;
@@ -85,8 +86,7 @@ export function useProjectSettings() {
       flashNotice(t("settings.languageSaved"));
       return true;
     } catch (saveError) {
-      error.value =
-        saveError instanceof Error ? saveError.message : t("settings.languageSaveFailed");
+      feedback.fromError(saveError, "settings.languageSaveFailed");
       return false;
     } finally {
       saving.value = false;

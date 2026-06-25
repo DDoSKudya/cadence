@@ -170,6 +170,13 @@
   color: var(--color-text-secondary);
 }
 
+.task-card-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

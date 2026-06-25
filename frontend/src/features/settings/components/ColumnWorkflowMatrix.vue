@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useI18n } from "vue-i18n";
 import { ArrowPathIcon, CheckIcon } from "@heroicons/vue/24/outline";
 
 import { saveColumnWorkflow } from "@/features/settings/api";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import { columnDisplayName } from "@/features/settings/scheme-display";
 import type { SettingsColumn } from "@/features/settings/types";
 import {
@@ -23,7 +23,7 @@ const emit = defineEmits<{
   saved: [ColumnWorkflow];
 }>();
 
-const { t } = useI18n();
+const feedback = useActionFeedback();
 const readOnly = computed(() => props.readOnly ?? false);
 const matrix = ref<Record<string, boolean>>({});
 const saving = ref(false);
@@ -111,9 +111,9 @@ async function persistTransitions(transitions: ColumnWorkflow["transitions"]) {
   try {
     const saved = await saveColumnWorkflow(transitions);
     emit("saved", saved);
+    feedback.successKey("toast.workflowSaved");
   } catch (saveError) {
-    formError.value =
-      saveError instanceof Error ? saveError.message : t("errors.saveWorkflow");
+    feedback.fromError(saveError, "errors.saveWorkflow");
   } finally {
     saving.value = false;
   }

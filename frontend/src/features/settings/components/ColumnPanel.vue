@@ -5,6 +5,7 @@ import { TrashIcon, XMarkIcon } from "@heroicons/vue/24/outline";
 
 import ColumnColorField from "@/features/settings/components/ColumnColorField.vue";
 import ColumnStatusBindings from "@/features/settings/components/ColumnStatusBindings.vue";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 import {
   ColumnInUseError,
   createColumn,
@@ -29,6 +30,7 @@ const emit = defineEmits<{
   changed: [];
 }>();
 const { t } = useI18n();
+const feedback = useActionFeedback();
 
 const name = ref("");
 const color = ref("slate");
@@ -134,10 +136,10 @@ async function submitCreate() {
       name: name.value.trim(),
       color: color.value.trim() || "slate",
     });
+    feedback.successKey("toast.columnCreated");
   } catch (createError) {
     saving.value = false;
-    formError.value =
-      createError instanceof Error ? createError.message : t("errors.createColumn");
+    feedback.fromError(createError, "errors.createColumn");
     return;
   }
 
@@ -165,10 +167,10 @@ async function submitEdit() {
       wip_limit: parseWipLimit(),
       task_status_ids: boundStatusIds.value,
     });
+    feedback.successKey("toast.columnSaved");
   } catch (updateError) {
     saving.value = false;
-    formError.value =
-      updateError instanceof Error ? updateError.message : t("errors.saveColumn");
+    feedback.fromError(updateError, "errors.saveColumn");
     return;
   }
 
@@ -187,14 +189,14 @@ async function removeColumn() {
 
   try {
     await deleteColumn(props.column.id);
+    feedback.successKey("toast.columnRemoved");
   } catch (removeError) {
     deleting.value = false;
     if (removeError instanceof ColumnInUseError) {
-      formError.value = removeError.message;
+      feedback.errorKey("errors.columnHasTasks");
       return;
     }
-    formError.value =
-      removeError instanceof Error ? removeError.message : t("errors.deleteColumn");
+    feedback.fromError(removeError, "errors.deleteColumn");
     return;
   }
 

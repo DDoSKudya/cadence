@@ -85,32 +85,6 @@
   transform: translateY(-0.35rem);
 }
 
-/* Expandable blocks (scheme create, etc.) */
-.scheme-collapse-enter-active {
-  overflow: hidden;
-  transition:
-    opacity var(--motion-medium) var(--ease-emphasis),
-    transform var(--motion-medium) var(--ease-emphasis),
-    max-height var(--motion-slow) var(--ease-emphasis);
-  max-height: 28rem;
-}
-
-.scheme-collapse-leave-active {
-  overflow: hidden;
-  transition:
-    opacity var(--motion-fast) var(--ease-soft),
-    transform var(--motion-fast) var(--ease-soft),
-    max-height var(--motion-medium) var(--ease-soft);
-  max-height: 28rem;
-}
-
-.scheme-collapse-enter-from,
-.scheme-collapse-leave-to {
-  opacity: 0;
-  transform: translateY(-0.35rem);
-  max-height: 0;
-}
-
 /* Loading / error / content swap */
 .scheme-body-swap-enter-active {
   transition:

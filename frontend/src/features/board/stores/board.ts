@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 
 import { getCurrentWeekKey } from "@/lib/week";
 import { t } from "@/i18n";
+import { useActionFeedback } from "@/composables/useActionFeedback";
 
 import * as boardApi from "../api";
 import type { BoardColumn, BoardTask, Tag, TaskCreatePayload } from "../types";
@@ -117,24 +118,43 @@ export const useBoardStore = defineStore("board", () => {
     }
   }
 
+  function findTaskColumnId(taskId: number): number | null {
+    for (const column of columns.value) {
+      if (column.tasks.some((task) => task.id === taskId)) {
+        return column.id;
+      }
+    }
+    return null;
+  }
+
   async function createTask(payload: Omit<TaskCreatePayload, "week"> & { week?: string }) {
-    error.value = "";
-    const task = await boardApi.createTask({
-      ...payload,
-      week: payload.week ?? weekKey.value,
-    });
-    replaceTask(task);
-    return task;
+    const feedback = useActionFeedback();
+    try {
+      const task = await boardApi.createTask({
+        ...payload,
+        week: payload.week ?? weekKey.value,
+      });
+      replaceTask(task);
+      feedback.successKey("toast.taskCreated");
+      return task;
+    } catch (createError) {
+      feedback.fromError(createError, "board.createFailed");
+      throw createError;
+    }
   }
 
   async function moveTask(taskId: number, targetColumnId: number, targetPosition: number) {
-    error.value = "";
+    const feedback = useActionFeedback();
+    const sourceColumnId = findTaskColumnId(taskId);
     try {
       const task = await boardApi.moveTask(taskId, targetColumnId, targetPosition);
       removeTask(taskId);
       replaceTask(task);
+      if (sourceColumnId !== null && sourceColumnId !== targetColumnId) {
+        feedback.successKey("toast.taskMoved");
+      }
     } catch (moveError) {
-      error.value = moveError instanceof Error ? moveError.message : t("board.moveFailed");
+      feedback.fromError(moveError, "board.moveFailed");
       await loadBoard();
       throw moveError;
     }

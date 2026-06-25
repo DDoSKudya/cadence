@@ -26,10 +26,16 @@
   display: grid;
   width: 2rem;
   height: 2rem;
+  flex-shrink: 0;
   place-items: center;
   border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: white;
+  background: transparent;
+  overflow: hidden;
+}
+
+.sidebar-mark-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .sidebar-title {
