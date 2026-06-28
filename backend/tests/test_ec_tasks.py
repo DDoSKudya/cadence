@@ -334,6 +334,34 @@ def test_tasks_ec_close_task_sets_archive_timestamps(api_client, planned_column)
 
 
 @pytest.mark.django_db
+def test_tasks_ec_create_with_story_points(api_client, planned_column):
+    response = api_client.post(
+        reverse("task-list"),
+        {
+            "title": "With points",
+            "column_id": planned_column.id,
+            "task_type": "task",
+            "story_points": 5,
+        },
+        content_type="application/json",
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["story_points"] == 5
+
+    board = api_client.get(reverse("board"))
+    assert board.status_code == 200
+    tasks = [
+        task
+        for column in board.json()["columns"]
+        for task in column["tasks"]
+        if task["id"] == payload["id"]
+    ]
+    assert len(tasks) == 1
+    assert tasks[0]["story_points"] == 5
+
+
+@pytest.mark.django_db
 def test_tasks_ec_create_requires_task_type(api_client, planned_column):
     response = api_client.post(
         reverse("task-list"),
