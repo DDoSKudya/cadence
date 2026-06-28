@@ -32,7 +32,7 @@ import { useActionFeedback } from "@/composables/useActionFeedback";
 import { statusDisplayName } from "@/lib/workflow-labels";
 import { columnDotStyle } from "@/lib/column-color";
 import { columnDisplayName } from "@/lib/column-display";
-import { fromLocalInput, toLocalInput } from "@/lib/task-form";
+import { fromLocalInput, parseStoryPointsInput, toLocalInput } from "@/lib/task-form";
 
 const board = useBoardStore();
 const { t } = useI18n();
@@ -249,15 +249,7 @@ function closePanel() {
 }
 
 function parseStoryPoints(): number | null | undefined {
-  const trimmed = storyPoints.value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 99) {
-    return undefined;
-  }
-  return parsed;
+  return parseStoryPointsInput(storyPoints.value);
 }
 
 function serializeOutgoingLinks() {

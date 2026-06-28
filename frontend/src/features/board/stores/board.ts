@@ -76,16 +76,6 @@ export const useBoardStore = defineStore("board", () => {
     column.tasks.sort((left, right) => left.position - right.position);
   }
 
-  function removeTask(taskId: number) {
-    for (const column of columns.value) {
-      const index = column.tasks.findIndex((item) => item.id === taskId);
-      if (index >= 0) {
-        column.tasks.splice(index, 1);
-        return;
-      }
-    }
-  }
-
   async function loadBoard() {
     loading.value = true;
     error.value = "";
@@ -143,13 +133,24 @@ export const useBoardStore = defineStore("board", () => {
     }
   }
 
+  function upsertTaskAfterMove(task: BoardTask) {
+    for (const column of columns.value) {
+      const index = column.tasks.findIndex((item) => item.id === task.id);
+      if (index >= 0) {
+        column.tasks[index] = task;
+        column.tasks.sort((left, right) => left.position - right.position);
+        return;
+      }
+    }
+    replaceTask(task);
+  }
+
   async function moveTask(taskId: number, targetColumnId: number, targetPosition: number) {
     const feedback = useActionFeedback();
     const sourceColumnId = findTaskColumnId(taskId);
     try {
       const task = await boardApi.moveTask(taskId, targetColumnId, targetPosition);
-      removeTask(taskId);
-      replaceTask(task);
+      upsertTaskAfterMove(task);
       if (sourceColumnId !== null && sourceColumnId !== targetColumnId) {
         feedback.successKey("toast.taskMoved");
       }

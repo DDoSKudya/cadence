@@ -111,7 +111,8 @@
 
 .board-column-list {
   display: flex;
-  flex: none;
+  min-height: 2rem;
+  flex: 1;
   flex-direction: column;
   gap: 0.625rem;
 }
@@ -170,6 +171,43 @@
   color: var(--color-text);
 }
 
+.task-card-badges {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.badge-story-points {
+  gap: 0.125rem;
+  border: 1px solid rgb(99 102 241 / 0.22);
+  background: linear-gradient(180deg, rgb(238 242 255 / 0.95), rgb(224 231 255 / 0.9));
+  padding-inline: 0.375rem 0.4375rem;
+  font-variant-numeric: tabular-nums;
+  color: #4338ca;
+}
+
+.badge-story-points-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  opacity: 0.72;
+}
+
+.badge-story-points-value {
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.badge-story-points-unit {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.78;
+}
+
 .task-card-description {
   display: -webkit-box;
   margin-top: 0.375rem;
@@ -181,25 +219,17 @@
   color: var(--color-text-secondary);
 }
 
-.task-card-story-points {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 0.5rem;
-  border-radius: 999px;
-  background: var(--color-surface-muted);
-  padding: 0.125rem 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
 .task-card-ghost {
   opacity: 0.4;
+  transition: none;
+  transform: none;
 }
 
 .task-card-drag {
   box-shadow: var(--shadow-card-hover);
   cursor: grabbing;
+  transition: none;
+  transform: none;
 }
 
 .task-meta-row {

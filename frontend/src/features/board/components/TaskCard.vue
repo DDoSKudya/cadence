@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { CalendarDaysIcon, LinkIcon, TagIcon } from "@heroicons/vue/24/outline";
+import { CalendarDaysIcon, HashtagIcon, LinkIcon, TagIcon } from "@heroicons/vue/24/outline";
 
 import type { BoardTask } from "@/features/board/types";
 import { useBoardStore } from "@/features/board/stores/board";
@@ -64,7 +64,16 @@ const taskTypeBadgeClass: Record<string, string> = {
     <div class="task-card-content">
       <div class="flex items-start justify-between gap-2">
         <h3 class="task-card-title min-w-0 flex-1">{{ task.title }}</h3>
-        <div class="flex shrink-0 flex-wrap items-center justify-end gap-1">
+        <div class="task-card-badges">
+          <span
+            v-if="task.story_points != null"
+            class="badge badge-story-points"
+            :title="$t('board.storyPointsShort', { points: task.story_points })"
+          >
+            <HashtagIcon class="badge-story-points-icon" aria-hidden="true" />
+            <span class="badge-story-points-value">{{ task.story_points }}</span>
+            <span class="badge-story-points-unit">SP</span>
+          </span>
           <span
             class="badge badge-task-type"
             :class="taskTypeBadgeClass[task.task_type] ?? taskTypeBadgeClass.task"
@@ -87,10 +96,6 @@ const taskTypeBadgeClass: Record<string, string> = {
       <p v-if="taskStatus" class="task-meta-row mt-2">
         <span class="task-card-status-dot" :style="columnDotStyle(taskStatus.color)" />
         {{ taskStatus.name }}
-      </p>
-
-      <p v-if="task.story_points != null" class="task-card-story-points">
-        {{ $t("board.storyPointsShort", { points: task.story_points }) }}
       </p>
 
       <p v-if="task.links_count" class="task-meta-row mt-2">

@@ -87,7 +87,7 @@ async function onDragChange(event: DragChangeEvent) {
         :list="column.tasks"
         item-key="id"
         group="board-tasks"
-        :animation="150"
+        :animation="200"
         :disabled="board.filtersActive"
         ghost-class="task-card-ghost"
         drag-class="task-card-drag"
