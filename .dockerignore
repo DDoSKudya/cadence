@@ -1,6 +1,8 @@
 # Used when build context is the repository root (infra/nginx/Dockerfile).
 .git
 .github
+.refact
+.cursor
 .env
 .env.*
 !.env.example

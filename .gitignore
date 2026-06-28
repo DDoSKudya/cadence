@@ -1,5 +1,9 @@
 .plan/
 
+# AI / IDE tooling (local runtime)
+.refact/
+.cursor/
+
 # Environment
 .env
 .env.*
@@ -52,3 +56,9 @@ logs/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Local Docker overrides
+docker-compose.override.yml
+
+# TypeScript incremental build cache (if leaked outside node_modules)
+*.tsbuildinfo
