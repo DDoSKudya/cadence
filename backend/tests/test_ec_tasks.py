@@ -306,6 +306,21 @@ def test_tasks_ec_task_list_filters_by_week(api_client, planned_column, week_key
 
 
 @pytest.mark.django_db
+def test_tasks_ec_close_moves_to_terminal_column(
+    api_client, planned_column, ready_column
+):
+    created = create_task_via_api(
+        api_client,
+        title="Close to terminal",
+        column_id=planned_column.id,
+    )
+    task_id = created.json()["id"]
+    close_task_via_api(api_client, task_id)
+    task = Task.objects.get(pk=task_id)
+    assert task.column_id == ready_column.id
+
+
+@pytest.mark.django_db
 def test_tasks_ec_close_task_sets_archive_timestamps(api_client, planned_column):
     created = create_task_via_api(
         api_client, title="Close timestamp", column_id=planned_column.id
@@ -316,3 +331,110 @@ def test_tasks_ec_close_task_sets_archive_timestamps(api_client, planned_column)
     assert task.closed_at is not None
     assert task.archived_at is not None
     assert task.closed_at <= timezone.now()
+
+
+@pytest.mark.django_db
+def test_tasks_ec_create_requires_task_type(api_client, planned_column):
+    response = api_client.post(
+        reverse("task-list"),
+        {"title": "No type", "column_id": planned_column.id},
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_tasks_ec_create_with_task_type_and_links(api_client, planned_column):
+    target = create_task_via_api(
+        api_client,
+        title="Target",
+        column_id=planned_column.id,
+        task_type="story",
+    )
+    assert target.status_code == 201
+
+    response = create_task_via_api(
+        api_client,
+        title="Blocker",
+        column_id=planned_column.id,
+        task_type="bug",
+        links=[
+            {
+                "target_task_id": target.json()["id"],
+                "link_type": "blocks",
+            },
+        ],
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["task_type"] == "bug"
+    outgoing = [link for link in payload["links"] if link["direction"] == "outgoing"]
+    assert len(outgoing) == 1
+    assert outgoing[0]["link_type"] == "blocks"
+    assert outgoing[0]["task_id"] == target.json()["id"]
+
+
+@pytest.mark.django_db
+def test_tasks_ec_update_task_type_and_sync_links(api_client, planned_column):
+    first = create_task_via_api(
+        api_client,
+        title="First",
+        column_id=planned_column.id,
+        task_type="task",
+    )
+    second = create_task_via_api(
+        api_client,
+        title="Second",
+        column_id=planned_column.id,
+        task_type="epic",
+    )
+    task_id = first.json()["id"]
+    second_id = second.json()["id"]
+
+    patch = api_client.patch(
+        reverse("task-detail", args=[task_id]),
+        {
+            "task_type": "story",
+            "links": [{"target_task_id": second_id, "link_type": "relates"}],
+        },
+        content_type="application/json",
+    )
+    assert patch.status_code == 200
+    payload = patch.json()
+    assert payload["task_type"] == "story"
+    outgoing = [link for link in payload["links"] if link["direction"] == "outgoing"]
+    assert len(outgoing) == 1
+    assert outgoing[0]["task_id"] == second_id
+
+    clear = api_client.patch(
+        reverse("task-detail", args=[task_id]),
+        {"links": []},
+        content_type="application/json",
+    )
+    assert clear.status_code == 200
+    assert clear.json()["links"] == []
+
+
+@pytest.mark.django_db
+def test_tasks_ec_search_tasks_for_link_picker(api_client, planned_column):
+    create_task_via_api(
+        api_client,
+        title="Alpha release",
+        column_id=planned_column.id,
+        task_type="epic",
+    )
+    blocker = create_task_via_api(
+        api_client,
+        title="Beta blocker",
+        column_id=planned_column.id,
+        task_type="bug",
+    )
+
+    response = api_client.get(
+        reverse("task-list"),
+        {"q": "beta", "exclude": blocker.json()["id"]},
+    )
+    assert response.status_code == 200
+    titles = [item["title"] for item in response.json()]
+    assert "Beta blocker" not in titles
+    assert "Alpha release" not in titles

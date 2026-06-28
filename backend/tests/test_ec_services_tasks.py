@@ -65,9 +65,20 @@ def test_analytics_ec_export_service_invalid_format_rejected():
     with pytest.raises(ValueError, match="file format"):
         AnalyticsExportService.create(
             export_type=ExportType.TASKS,
-            file_format="pdf",
+            file_format="docx",
             filters={},
         )
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_service_accepts_pdf_format(media_root):
+    with patch("apps.analytics.job_handlers.run_analytics_export.delay"):
+        export_job = AnalyticsExportService.create(
+            export_type=ExportType.TASKS,
+            file_format=FileFormat.PDF,
+            filters={},
+        )
+    assert export_job.file_format == FileFormat.PDF
 
 
 @pytest.mark.django_db

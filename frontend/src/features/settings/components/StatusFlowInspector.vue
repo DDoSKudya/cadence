@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 import type { SettingsColumn } from "@/features/settings/types";
 import type { TaskStatusNode, TaskStatusTransition } from "@/features/settings/task-status-graph";
+import { statusDisplayName } from "@/lib/workflow-labels";
 
 const props = defineProps<{
   status: TaskStatusNode | null;
@@ -64,7 +65,7 @@ const requiredFieldsText = computed(() => {
   <aside v-if="status || transition" class="status-flow-inspector">
     <template v-if="status">
       <p class="status-flow-inspector-eyebrow">{{ $t("settings.statusFlowInspectorStatus") }}</p>
-      <h3 class="status-flow-inspector-title">{{ status.name }}</h3>
+      <h3 class="status-flow-inspector-title">{{ statusDisplayName(status) }}</h3>
 
       <label class="status-flow-field">
         <span>{{ $t("settings.statusFlowColumnLabel") }}</span>

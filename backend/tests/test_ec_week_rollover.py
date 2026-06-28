@@ -47,7 +47,7 @@ def test_week_rollover_closes_ready_tasks(api_client, ready_column, week_key):
 def test_create_task_without_column_uses_backlog(api_client, planned_column):
     response = api_client.post(
         "/api/v1/tasks/",
-        {"title": "Default backlog"},
+        {"title": "Default backlog", "task_type": "task"},
         content_type="application/json",
     )
     assert response.status_code == 201

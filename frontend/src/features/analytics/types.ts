@@ -8,6 +8,7 @@ export interface AnalyticsFilters {
 
 export interface AnalyticsSummary {
   period: Record<string, string>;
+  scheme?: { slug: string; name: string };
   tasks_created: number;
   tasks_closed: number;
   tasks_archived: number;
@@ -22,6 +23,7 @@ export interface StaleTaskItem {
   id: number;
   title: string;
   column: string;
+  column_system_type?: string;
   days_in_column: number;
 }
 
@@ -35,6 +37,7 @@ export interface WeeklyTrendItem {
 export interface BreakdownItem {
   key: string;
   count: number;
+  name?: string;
   system_type?: string;
 }
 
@@ -44,9 +47,15 @@ export interface CycleTimeData {
   distribution: { bucket: string; count: number }[];
 }
 
+export interface TelegramActionMetric {
+  slug: string;
+  count: number;
+}
+
 export interface NotificationMetrics {
   notifications_sent: number;
   notification_failures: number;
+  telegram_actions: TelegramActionMetric[];
   telegram_done_actions: number;
   telegram_in_progress_actions: number;
   tasks_closed_after_notification: number;
@@ -76,7 +85,30 @@ export type ExportType =
   | "jobs_report"
   | "imports_report";
 
-export type ExportFormat = "csv" | "xlsx";
+export type ExportFormat = "csv" | "xlsx" | "pdf";
+
+export interface ExportPreviewSheetData {
+  rows: string[][];
+  total: number;
+  kpis?: Record<"created" | "closed" | "active" | "overdue" | "stale", number>;
+}
+
+export type ExportPreviewSheetsMap = Record<string, ExportPreviewSheetData>;
+
+export interface ExportPreviewResponse {
+  export_type: ExportType;
+  sheets: Array<ExportPreviewSheetData & { id: string }>;
+}
+
+export interface ExportSnapshot {
+  schemeName?: string;
+  summary: AnalyticsSummary | null;
+  weeklyTrend: WeeklyTrendItem[];
+  columnBreakdown: BreakdownItem[];
+  tagBreakdown: BreakdownItem[];
+  notifications: NotificationMetrics | null;
+  archiveStats: ArchiveAnalytics | null;
+}
 
 export interface AnalyticsExportJob {
   id: number;

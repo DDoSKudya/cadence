@@ -1,5 +1,6 @@
 import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { getI18nLocale } from "@/i18n";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -10,6 +11,7 @@ import type {
   BreakdownItem,
   CycleTimeData,
   ExportFormat,
+  ExportPreviewResponse,
   ExportType,
   NotificationMetrics,
   TaskFlowData,
@@ -106,6 +108,17 @@ export async function fetchArchiveAnalytics(filters: AnalyticsFilters): Promise<
     query ? `/api/v1/analytics/archive/?${query}` : "/api/v1/analytics/archive/",
   );
   return parseJson(response, t("errors.loadArchiveAnalytics"));
+}
+
+export async function fetchExportPreview(
+  exportType: ExportType,
+  filters: AnalyticsFilters,
+): Promise<ExportPreviewResponse> {
+  const params = new URLSearchParams(buildQuery(filters));
+  params.set("export_type", exportType);
+  params.set("locale", getI18nLocale());
+  const response = await apiFetch(`/api/v1/analytics/exports/preview/?${params.toString()}`);
+  return parseJson(response, t("errors.loadExportPreview"));
 }
 
 export async function createAnalyticsExport(payload: {

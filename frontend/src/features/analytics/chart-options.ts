@@ -1,6 +1,7 @@
 import type { EChartsOption } from "echarts";
 
 import type { BreakdownItem, StaleTaskItem, WeeklyTrendItem } from "@/features/analytics/types";
+import { cycleBucketLabel, telegramActionLabel } from "@/features/analytics/labels";
 import { t } from "@/i18n";
 
 import { CHART_COLORS } from "./register-echarts";
@@ -332,7 +333,7 @@ export function distributionOption(
     grid: { left: 8, right: 8, top: 8, bottom: 20, containLabel: true },
     xAxis: {
       type: "category",
-      data: filtered.map((item) => item.bucket),
+      data: filtered.map((item) => cycleBucketLabel(item.bucket)),
       axisLine: { lineStyle: { color: CHART_COLORS.grid } },
       axisLabel: { color: CHART_COLORS.text, fontSize: 10 },
     },
@@ -442,12 +443,15 @@ export function notificationsOption(metrics: {
   );
 }
 
-export function telegramActionsOption(done: number, inProgress: number): EChartsOption {
+export function telegramActionsOption(actions: { slug: string; count: number }[]): EChartsOption {
+  if (actions.length === 0) {
+    return {};
+  }
   return breakdownDonutOption(
-    [
-      { key: "Done", count: done },
-      { key: "In progress", count: inProgress },
-    ],
-    [CHART_COLORS.accent, CHART_COLORS.primarySoft],
+    actions.map((action) => ({
+      key: telegramActionLabel(action.slug),
+      count: action.count,
+    })),
+    [CHART_COLORS.accent, CHART_COLORS.primarySoft, CHART_COLORS.indigo, CHART_COLORS.violet],
   );
 }

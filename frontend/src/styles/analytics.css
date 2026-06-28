@@ -342,3 +342,668 @@
     grid-template-columns: 1fr;
   }
 }
+
+.export-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgb(22 27 38 / 0.42);
+  backdrop-filter: blur(3px);
+}
+
+.export-modal {
+  display: flex;
+  width: min(1480px, calc(100vw - 2.5rem));
+  height: min(calc(100vh - 2.5rem), 960px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: calc(var(--radius-lg) + 4px);
+  background: var(--color-surface);
+  box-shadow: 0 24px 64px rgb(15 23 42 / 0.18);
+}
+
+.export-modal-header,
+.export-modal-footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.export-modal-footer {
+  align-items: center;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: none;
+}
+
+.export-modal-title {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.export-modal-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.export-modal-body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+}
+
+.export-modal-sidebar {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: auto;
+  border-right: 1px solid var(--color-border-subtle);
+  padding: 1rem;
+  background: var(--color-surface-muted);
+}
+
+.export-modal-preview-pane {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+  padding: 1rem 1.25rem;
+}
+
+.export-modal-section-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.export-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.export-report-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    border-color var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    background var(--motion-fast) var(--ease-soft);
+}
+
+.export-report-card:hover {
+  border-color: var(--color-border);
+  transform: translateY(-1px);
+}
+
+.export-report-card-active {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 24px rgb(37 99 235 / 0.12);
+}
+
+.export-report-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.export-report-card-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.export-report-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.export-report-card-desc {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+
+.export-modal-format,
+.export-modal-format-hint {
+  flex-shrink: 0;
+}
+
+.export-modal-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.export-modal-format {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.export-modal-format-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.export-modal-format-select {
+  min-width: min(220px, 42vw);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.export-modal-format-hint {
+  max-width: 280px;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: right;
+  color: var(--color-text-secondary);
+}
+
+.export-modal-status {
+  min-width: 0;
+  flex: 1;
+}
+
+.export-modal-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.export-preview {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.export-preview .export-workbook {
+  min-height: 0;
+  flex: 1;
+}
+
+.export-workbook {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.06),
+    inset 0 0 0 1px rgb(255 255 255 / 0.7);
+}
+
+.export-workbook-viewport {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+  background:
+    linear-gradient(90deg, rgb(226 232 240 / 0.35) 1px, transparent 1px),
+    linear-gradient(rgb(226 232 240 / 0.35) 1px, transparent 1px),
+    #fff;
+  background-size:
+    24px 24px,
+    24px 24px,
+    auto;
+}
+
+.export-worksheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.06);
+}
+
+.export-worksheet-title {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  color: #fff;
+  background: #1e3a8a;
+}
+
+.export-worksheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem 1rem;
+}
+
+.export-worksheet-meta-wrap {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.export-worksheet-meta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.export-worksheet-meta th {
+  width: 42%;
+  padding: 0.35rem 0.75rem;
+  font-weight: 600;
+  text-align: left;
+  color: #475569;
+  vertical-align: middle;
+  border: 1px solid #e2e8f0;
+}
+
+.export-worksheet-meta td {
+  padding: 0.35rem 0.75rem;
+  text-align: left;
+  color: #64748b;
+  vertical-align: middle;
+  border: 1px solid #e2e8f0;
+}
+
+.export-worksheet-kpis {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.export-worksheet-kpis th,
+.export-worksheet-kpis td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.export-worksheet-kpis th {
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.export-worksheet-kpis td {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e40af;
+  background: #fff;
+}
+
+.export-worksheet-table-wrap {
+  overflow: auto;
+  border: 1px solid #cbd5e1;
+}
+
+.export-worksheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.75rem;
+}
+
+.export-worksheet-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.export-worksheet-table th {
+  padding: 0.5rem 0.625rem;
+  background: #1e40af;
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+  border: 1px solid #1e3a8a;
+}
+
+.export-worksheet-table td {
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  text-align: center;
+  vertical-align: middle;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.export-worksheet-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.export-worksheet-empty,
+.export-worksheet-more {
+  padding: 0.75rem 0.625rem;
+  text-align: center;
+  vertical-align: middle;
+  color: #64748b;
+  font-style: italic;
+  background: #f8fafc;
+}
+
+.export-worksheet-chart {
+  padding: 0.625rem;
+  border: 1px solid #d0d7e2;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f8fafc, #fff);
+}
+
+.export-worksheet-chart-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  color: #334155;
+}
+
+.export-worksheet-chart-canvas {
+  width: 100%;
+}
+
+.export-worksheet-chart-canvas--md {
+  min-height: 200px;
+}
+
+.export-worksheet-chart-canvas--lg {
+  min-height: 240px;
+}
+
+.export-worksheet-chart-canvas--donut {
+  min-height: 220px;
+}
+
+.export-worksheet-footnote {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.export-workbook-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  border-top: 1px solid #cbd5e1;
+  background: #e2e8f0;
+}
+
+.export-workbook-tab {
+  flex-shrink: 0;
+  border: none;
+  border-right: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  padding: 0.45rem 0.875rem;
+  font-size: 0.75rem;
+  color: #475569;
+  transition:
+    background var(--motion-fast) var(--ease-soft),
+    color var(--motion-fast) var(--ease-soft);
+}
+
+.export-workbook-tab:hover {
+  background: #f1f5f9;
+}
+
+.export-workbook-tab-active {
+  background: #fff;
+  color: #1e293b;
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 #1e40af;
+}
+
+.export-preview-swap-enter-active,
+.export-preview-swap-leave-active,
+.export-sheet-swap-enter-active,
+.export-sheet-swap-leave-active {
+  transition:
+    opacity var(--motion-medium) var(--ease-soft),
+    transform var(--motion-medium) var(--ease-emphasis);
+}
+
+.export-preview-swap-enter-from {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.export-preview-swap-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.export-sheet-swap-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.export-sheet-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.export-modal-enter-active,
+.export-modal-leave-active {
+  transition: opacity var(--motion-medium) var(--ease-soft);
+}
+
+.export-modal-enter-active.export-modal-backdrop,
+.export-modal-leave-active.export-modal-backdrop {
+  transition:
+    opacity var(--motion-medium) var(--ease-soft),
+    backdrop-filter var(--motion-slow) var(--ease-soft);
+}
+
+.export-modal-enter-active .export-modal,
+.export-modal-leave-active .export-modal {
+  transition:
+    opacity var(--motion-slow) var(--ease-emphasis),
+    transform var(--motion-slow) var(--ease-emphasis);
+}
+
+.export-modal-enter-active .export-report-card {
+  animation: export-card-in var(--motion-slow) var(--ease-emphasis) backwards;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(4) {
+  animation-delay: 130ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(5) {
+  animation-delay: 160ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(6) {
+  animation-delay: 190ms;
+}
+
+.export-modal-enter-active .export-report-card:nth-child(7) {
+  animation-delay: 220ms;
+}
+
+.export-modal-enter-active .export-preview-sheet {
+  animation: export-preview-in var(--motion-slow) var(--ease-emphasis) 120ms backwards;
+}
+
+.export-modal-enter-active .export-modal-footer {
+  animation: export-footer-in var(--motion-medium) var(--ease-soft) 180ms backwards;
+}
+
+.export-modal-enter-from,
+.export-modal-leave-to {
+  opacity: 0;
+}
+
+.export-modal-enter-from.export-modal-backdrop,
+.export-modal-leave-to.export-modal-backdrop {
+  backdrop-filter: blur(0);
+}
+
+.export-modal-enter-from .export-modal,
+.export-modal-leave-to .export-modal {
+  opacity: 0;
+  transform: translateY(1rem) scale(0.96);
+}
+
+.export-modal-leave-active .export-report-card,
+.export-modal-leave-active .export-preview-sheet,
+.export-modal-leave-active .export-modal-footer {
+  animation: none;
+}
+
+@keyframes export-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes export-preview-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes export-footer-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .export-modal-body {
+    grid-template-columns: 1fr;
+  }
+
+  .export-modal-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border-subtle);
+    max-height: 40vh;
+  }
+
+  .export-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-modal-toolbar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-modal-format {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-modal-format-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .export-modal-format-hint {
+    max-width: none;
+    text-align: left;
+  }
+
+  .export-modal-actions {
+    width: 100%;
+  }
+
+  .export-modal-actions .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .export-worksheet {
+    min-width: 0;
+  }
+}

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { setI18nLocale } from "@/i18n";
 import {
+  statusDisplayName,
   translateColumnLabel,
   translateStatusLabel,
   translateTaskFieldList,
@@ -15,6 +16,8 @@ describe("workflow-labels", () => {
   it("translates_status_by_slug", () => {
     expect(translateStatusLabel("Open", "open")).toBe("Открыта");
     expect(translateStatusLabel("Ready on develop", "ready_on_develop")).toBe("Готова к работе");
+    expect(statusDisplayName({ name: "Done", slug: "done" })).toBe("Выполнена");
+    expect(statusDisplayName({ name: "Cancel", slug: "cancel" })).toBe("Отменена");
   });
 
   it("translates_column_by_system_type", () => {
@@ -22,6 +25,6 @@ describe("workflow-labels", () => {
   });
 
   it("translates_task_fields", () => {
-    expect(translateTaskFieldList(["description", "evidence_url"])).toContain("Описание");
+    expect(translateTaskFieldList(["description"])).toContain("Описание");
   });
 });

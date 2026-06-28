@@ -28,6 +28,19 @@ export async function fetchTask(taskId: number): Promise<TaskDetail> {
   return parseJson(response, t("board.loadFailed"));
 }
 
+export async function searchTasks(query: string, excludeTaskId?: number): Promise<BoardTask[]> {
+  const params = new URLSearchParams();
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+  if (excludeTaskId != null) {
+    params.set("exclude", String(excludeTaskId));
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await apiFetch(`/api/v1/tasks/${suffix}`);
+  return parseJson(response, t("board.searchTasksFailed"));
+}
+
 export async function fetchTags(): Promise<Tag[]> {
   const response = await apiFetch("/api/v1/tags/");
   return parseJson(response, t("errors.loadTags"));
@@ -64,12 +77,11 @@ export async function moveTask(
   return parseJson<BoardTask>(response, t("board.moveFailed"));
 }
 
-export async function closeTask(taskId: number, completionNote = "", evidenceUrl?: string) {
+export async function closeTask(taskId: number, completionNote = "") {
   const response = await apiFetch(`/api/v1/tasks/${taskId}/close/`, {
     method: "POST",
     body: JSON.stringify({
       completion_note: completionNote,
-      evidence_url: evidenceUrl ?? null,
     }),
   });
   return parseJson<TaskDetail>(response, t("board.closeFailed"));

@@ -47,7 +47,9 @@ def schedule_next_reminder(
     settings: ProjectSettings | None = None,
     base_time: datetime | None = None,
 ) -> None:
-    if not task.reminder_enabled:
+    from apps.notifications.eligibility import task_accepts_notifications
+
+    if not task.reminder_enabled or not task_accepts_notifications(task):
         task.next_reminder_at = None
         task.save(update_fields=["next_reminder_at", "updated_at"])
         return

@@ -17,6 +17,19 @@ class TaskPriority(models.TextChoices):
     HIGH = "high", "High"
 
 
+class TaskType(models.TextChoices):
+    EPIC = "epic", "Epic"
+    STORY = "story", "Story"
+    TASK = "task", "Task"
+    BUG = "bug", "Bug"
+
+
+class TaskLinkType(models.TextChoices):
+    RELATES = "relates", "Related"
+    BLOCKS = "blocks", "Blocks"
+    DUPLICATES = "duplicates", "Duplicates"
+
+
 class TaskEventType(models.TextChoices):
     CREATED = "created", "Created"
     UPDATED = "updated", "Updated"
@@ -76,6 +89,11 @@ class Task(models.Model):
         choices=TaskPriority.choices,
         default=TaskPriority.NORMAL,
     )
+    task_type = models.CharField(
+        max_length=20,
+        choices=TaskType.choices,
+        default=TaskType.TASK,
+    )
     column_entered_at = models.DateTimeField()
     due_at = models.DateTimeField(null=True, blank=True)
     source = models.CharField(
@@ -85,6 +103,7 @@ class Task(models.Model):
     )
     external_ref = models.CharField(max_length=240, blank=True, default="")
     evidence_url = models.TextField(blank=True, default="")
+    story_points = models.PositiveSmallIntegerField(null=True, blank=True)
     completion_note = models.TextField(blank=True, default="")
     reminder_enabled = models.BooleanField(default=True)
     next_reminder_at = models.DateTimeField(null=True, blank=True)
@@ -170,6 +189,44 @@ class Task(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class TaskLink(models.Model):
+    from_task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="outgoing_links",
+    )
+    to_task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name="incoming_links",
+    )
+    link_type = models.CharField(
+        max_length=20,
+        choices=TaskLinkType.choices,
+        default=TaskLinkType.RELATES,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=["from_task", "to_task", "link_type"],
+                name="uq_task_links_from_to_type",
+            ),
+            models.CheckConstraint(
+                condition=~Q(from_task=models.F("to_task")),
+                name="chk_task_links_not_self",
+            ),
+        )
+        indexes = (
+            models.Index(fields=["from_task", "link_type"], name="idx_task_links_from"),
+            models.Index(fields=["to_task", "link_type"], name="idx_task_links_to"),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.from_task_id}->{self.to_task_id}:{self.link_type}"
 
 
 class TaskTag(models.Model):

@@ -3,6 +3,11 @@ from .environment import env
 
 DEBUG: bool = env.bool("DJANGO_DEBUG", True)
 
+# Run Celery tasks in-process during local development so export code changes
+# apply immediately without restarting the worker container.
+CELERY_TASK_ALWAYS_EAGER = DEBUG
+CELERY_TASK_EAGER_PROPAGATES = True
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1",

@@ -5,7 +5,8 @@ from rest_framework import serializers
 
 from apps.boards.models import Board, BoardColumn
 from apps.core.serializers import TagSerializer
-from apps.tasks.models import Task, TaskEvent, TaskPriority
+from apps.tasks.models import Task, TaskEvent, TaskLinkType, TaskPriority, TaskType
+from apps.tasks.task_link_services import TaskLinkService
 from apps.weeks.models import Week
 from apps.weeks.serializers import WeekSerializer
 
@@ -17,30 +18,47 @@ class BoardPayload(TypedDict):
     tasks_by_column: Mapping[int, list[Task]]
 
 
+class TaskLinkWriteSerializer(serializers.Serializer):
+    target_task_id = serializers.IntegerField(min_value=1)
+    link_type = serializers.ChoiceField(choices=TaskLinkType.choices)
+
+
 class TaskBoardSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     task_status_id = serializers.IntegerField(read_only=True, allow_null=True)
     task_status_name = serializers.SerializerMethodField()
+    links_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
         fields = (
             "id",
             "title",
+            "description",
+            "task_type",
             "priority",
             "position",
             "column_id",
             "week_id",
             "due_at",
             "source",
+            "story_points",
             "tags",
             "task_status_id",
             "task_status_name",
+            "links_count",
         )
 
     def get_task_status_name(self, obj: Task) -> str | None:
         status = obj.task_status
         return status.name if status is not None else None
+
+    def get_links_count(self, obj: Task) -> int:
+        outgoing = getattr(obj, "_outgoing_links_count", None)
+        incoming = getattr(obj, "_incoming_links_count", None)
+        if outgoing is not None and incoming is not None:
+            return int(outgoing) + int(incoming)
+        return TaskLinkService.link_count(obj)
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -48,6 +66,7 @@ class TaskSerializer(serializers.ModelSerializer):
     week = WeekSerializer(read_only=True)
     task_status_id = serializers.IntegerField(read_only=True, allow_null=True)
     task_status = serializers.SerializerMethodField()
+    links = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
@@ -60,12 +79,13 @@ class TaskSerializer(serializers.ModelSerializer):
             "week",
             "week_id",
             "position",
+            "task_type",
             "priority",
             "column_entered_at",
             "due_at",
             "source",
             "external_ref",
-            "evidence_url",
+            "story_points",
             "completion_note",
             "reminder_enabled",
             "next_reminder_at",
@@ -79,6 +99,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "tags",
             "task_status_id",
             "task_status",
+            "links",
         )
         read_only_fields = (
             "id",
@@ -96,6 +117,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "last_notified_at",
             "task_status_id",
             "task_status",
+            "links",
         )
 
     def get_task_status(self, obj: Task) -> dict[str, object] | None:
@@ -111,12 +133,16 @@ class TaskSerializer(serializers.ModelSerializer):
             "color": status.color,
         }
 
+    def get_links(self, obj: Task) -> list[dict[str, object]]:
+        return TaskLinkService.serialize_for_task(obj)
+
 
 class TaskCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=240)
     description = serializers.CharField(required=False, allow_blank=True, default="")
     column_id = serializers.IntegerField(required=False)
     week = serializers.CharField(required=False, allow_null=True)
+    task_type = serializers.ChoiceField(choices=TaskType.choices)
     priority = serializers.ChoiceField(
         choices=TaskPriority.choices,
         required=False,
@@ -128,14 +154,22 @@ class TaskCreateSerializer(serializers.Serializer):
         allow_empty=True,
     )
     due_at = serializers.DateTimeField(required=False, allow_null=True)
-    evidence_url = serializers.CharField(required=False, allow_blank=True, default="")
     reminder_enabled = serializers.BooleanField(required=False, default=True)
+    story_points = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        min_value=1,
+        max_value=99,
+    )
+    external_ref = serializers.CharField(required=False, allow_blank=True, default="")
+    links = TaskLinkWriteSerializer(many=True, required=False, allow_empty=True)
 
 
 class TaskUpdateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=240, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
     week = serializers.CharField(required=False, allow_null=True)
+    task_type = serializers.ChoiceField(choices=TaskType.choices, required=False)
     priority = serializers.ChoiceField(choices=TaskPriority.choices, required=False)
     tags = serializers.ListField(
         child=serializers.CharField(max_length=60),
@@ -143,16 +177,23 @@ class TaskUpdateSerializer(serializers.Serializer):
         allow_empty=True,
     )
     due_at = serializers.DateTimeField(required=False, allow_null=True)
-    evidence_url = serializers.CharField(required=False, allow_blank=True)
     reminder_enabled = serializers.BooleanField(required=False)
     reminder_interval_minutes = serializers.IntegerField(
         min_value=1,
         required=False,
         allow_null=True,
     )
+    story_points = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        min_value=1,
+        max_value=99,
+    )
+    external_ref = serializers.CharField(required=False, allow_blank=True)
     task_status_id = serializers.IntegerField(
         min_value=1, required=False, allow_null=True
     )
+    links = TaskLinkWriteSerializer(many=True, required=False, allow_empty=True)
 
 
 class TaskMoveSerializer(serializers.Serializer):
@@ -166,7 +207,6 @@ class TaskCloseSerializer(serializers.Serializer):
         allow_blank=True,
         default="",
     )
-    evidence_url = serializers.CharField(required=False, allow_null=True)
 
 
 class TaskEventSerializer(serializers.ModelSerializer):

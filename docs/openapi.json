@@ -2,8 +2,8 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Cadence API",
-        "version": "1.0.0",
-        "description": "Personal weekly Kanban API for Cadence."
+        "version": "1.1.0",
+        "description": "Personal weekly Kanban API for Cadence: board, tasks, imports, notifications, archive, and analytics with CSV/XLSX/PDF export jobs."
     },
     "paths": {
         "/api/health/": {
@@ -250,8 +250,25 @@
         "/api/v1/analytics/exports/": {
             "get": {
                 "operationId": "v1_analytics_exports_retrieve",
+                "summary": "List analytics export jobs",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "tags": [
-                    "v1"
+                    "analytics"
                 ],
                 "security": [
                     {
@@ -260,23 +277,58 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalyticsExportListResponse"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             },
             "post": {
                 "operationId": "v1_analytics_exports_create",
+                "summary": "Create analytics export job",
                 "tags": [
-                    "v1"
+                    "analytics"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnalyticsExportCreate"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnalyticsExportCreate"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnalyticsExportCreate"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "cookieAuth": []
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalyticsExport"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -284,6 +336,7 @@
         "/api/v1/analytics/exports/{id}/": {
             "get": {
                 "operationId": "v1_analytics_exports_retrieve_2",
+                "summary": "Get analytics export job",
                 "parameters": [
                     {
                         "in": "path",
@@ -295,7 +348,7 @@
                     }
                 ],
                 "tags": [
-                    "v1"
+                    "analytics"
                 ],
                 "security": [
                     {
@@ -304,7 +357,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalyticsExport"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -312,6 +372,7 @@
         "/api/v1/analytics/exports/{id}/download/": {
             "get": {
                 "operationId": "v1_analytics_exports_download_retrieve",
+                "summary": "Download analytics export file",
                 "parameters": [
                     {
                         "in": "path",
@@ -323,7 +384,7 @@
                     }
                 ],
                 "tags": [
-                    "v1"
+                    "analytics"
                 ],
                 "security": [
                     {
@@ -332,7 +393,107 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "description": "CSV, XLSX, or PDF file attachment."
+                    },
+                    "409": {
+                        "description": "Export is not ready for download."
+                    }
+                }
+            }
+        },
+        "/api/v1/analytics/exports/preview/": {
+            "get": {
+                "operationId": "v1_analytics_exports_preview_retrieve",
+                "description": "Returns tabular sheet data for the export dialog. Layout matches styled XLSX and PDF exports.",
+                "summary": "Preview analytics export layout",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "export_type",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "archive",
+                                "imports_report",
+                                "jobs_report",
+                                "notification_report",
+                                "tag_summary",
+                                "tasks",
+                                "weekly_summary"
+                            ]
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "from",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Period start (date `YYYY-MM-DD` or datetime)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "locale",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Export locale (`ru` or `en`)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Task source filter (`ui`, `api`, `json_import`, …)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "tags",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Comma-separated tag slugs."
+                    },
+                    {
+                        "in": "query",
+                        "name": "to",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Period end (date `YYYY-MM-DD` or datetime)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "week",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "ISO week, e.g. `2026-W12`."
+                    }
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalyticsExportPreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Invalid export_type."
                     }
                 }
             }
@@ -528,6 +689,86 @@
                 }
             }
         },
+        "/api/v1/board/schemes/": {
+            "get": {
+                "operationId": "v1_board_schemes_retrieve",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1_board_schemes_create",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/board/schemes/{slug}/": {
+            "delete": {
+                "operationId": "v1_board_schemes_destroy",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "slug",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/board/schemes/switch/": {
+            "post": {
+                "operationId": "v1_board_schemes_switch_create",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/columns/": {
             "get": {
                 "operationId": "v1_columns_retrieve",
@@ -619,6 +860,40 @@
         "/api/v1/columns/reorder/": {
             "post": {
                 "operationId": "v1_columns_reorder_create",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/columns/workflow/": {
+            "get": {
+                "operationId": "v1_columns_workflow_retrieve",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1_columns_workflow_update",
                 "tags": [
                     "v1"
                 ],
@@ -849,6 +1124,52 @@
         "/api/v1/notifications/": {
             "get": {
                 "operationId": "v1_notifications_retrieve",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/services/{service_id}/logs/": {
+            "get": {
+                "operationId": "v1_platform_services_logs_retrieve",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "service_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/platform/status/": {
+            "get": {
+                "operationId": "v1_platform_status_retrieve",
                 "tags": [
                     "v1"
                 ],
@@ -1223,6 +1544,56 @@
                 ],
                 "responses": {
                     "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/task-statuses/": {
+            "get": {
+                "operationId": "v1_task_statuses_retrieve",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1_task_statuses_update",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1_task_statuses_partial_update",
+                "tags": [
+                    "v1"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
                         "description": "No response body"
                     }
                 }
@@ -1633,12 +2004,232 @@
     },
     "components": {
         "schemas": {
+            "AnalyticsExport": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "export_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ExportTypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "file_format": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FileFormatEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StatusEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "filters": {
+                        "readOnly": true
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "file_size_bytes": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "rows_count": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "error_message": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "finished_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "background_job_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "background_job_id",
+                    "created_at",
+                    "error_message",
+                    "expires_at",
+                    "export_type",
+                    "file_format",
+                    "file_path",
+                    "file_size_bytes",
+                    "filters",
+                    "finished_at",
+                    "id",
+                    "rows_count",
+                    "started_at",
+                    "status"
+                ]
+            },
+            "AnalyticsExportCreate": {
+                "type": "object",
+                "properties": {
+                    "export_type": {
+                        "$ref": "#/components/schemas/ExportTypeEnum"
+                    },
+                    "file_format": {
+                        "$ref": "#/components/schemas/FileFormatEnum"
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "export_type",
+                    "file_format"
+                ]
+            },
+            "AnalyticsExportListResponse": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                    "page_size": {
+                        "type": "integer"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AnalyticsExport"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "page",
+                    "page_size",
+                    "results"
+                ]
+            },
+            "AnalyticsExportPreviewResponse": {
+                "type": "object",
+                "properties": {
+                    "export_type": {
+                        "type": "string"
+                    },
+                    "sheets": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AnalyticsExportPreviewSheet"
+                        }
+                    }
+                },
+                "required": [
+                    "export_type",
+                    "sheets"
+                ]
+            },
+            "AnalyticsExportPreviewSheet": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "total": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "rows",
+                    "total"
+                ]
+            },
+            "ExportTypeEnum": {
+                "enum": [
+                    "tasks",
+                    "archive",
+                    "weekly_summary",
+                    "tag_summary",
+                    "notification_report",
+                    "jobs_report",
+                    "imports_report"
+                ],
+                "type": "string",
+                "description": "* `tasks` - Tasks\n* `archive` - Archive\n* `weekly_summary` - Weekly summary\n* `tag_summary` - Tag summary\n* `notification_report` - Notification report\n* `jobs_report` - Jobs report\n* `imports_report` - Imports report"
+            },
+            "FileFormatEnum": {
+                "enum": [
+                    "csv",
+                    "xlsx",
+                    "pdf"
+                ],
+                "type": "string",
+                "description": "* `csv` - CSV\n* `xlsx` - XLSX\n* `pdf` - PDF"
+            },
+            "LanguageEnum": {
+                "enum": [
+                    "en",
+                    "ru"
+                ],
+                "type": "string",
+                "description": "* `en` - English\n* `ru` - Russian"
+            },
             "PatchedProjectSettings": {
                 "type": "object",
                 "properties": {
                     "timezone": {
                         "type": "string",
                         "maxLength": 64
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageEnum"
                     },
                     "json_inbox_enabled": {
                         "type": "boolean"
@@ -1677,18 +2268,21 @@
                     },
                     "default_reminder_interval_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "stale_in_progress_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "stale_planned_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "quiet_hours_start": {
                         "type": "string",
@@ -1744,6 +2338,9 @@
                         "type": "string",
                         "maxLength": 64
                     },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageEnum"
+                    },
                     "json_inbox_enabled": {
                         "type": "boolean"
                     },
@@ -1781,18 +2378,21 @@
                     },
                     "default_reminder_interval_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "stale_in_progress_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "stale_planned_minutes": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "format": "int64"
                     },
                     "quiet_hours_start": {
                         "type": "string",
@@ -1817,6 +2417,16 @@
                     "telegram_bot_token_set",
                     "updated_at"
                 ]
+            },
+            "StatusEnum": {
+                "enum": [
+                    "pending",
+                    "processing",
+                    "succeeded",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `pending` - Pending\n* `processing` - Processing\n* `succeeded` - Succeeded\n* `failed` - Failed"
             },
             "Tag": {
                 "type": "object",

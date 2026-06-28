@@ -20,8 +20,9 @@ import type {
   TaskStatusNode,
   TaskStatusTransition,
 } from "@/features/settings/task-status-graph";
-import { statusNodeKey } from "@/features/settings/task-status-graph";
+import { statusNodeKey, isTerminalStatus } from "@/features/settings/task-status-graph";
 import { colorToHex } from "@/lib/column-color";
+import { statusDisplayName } from "@/lib/workflow-labels";
 
 import StatusFlowInspector from "./StatusFlowInspector.vue";
 import StatusFlowNode from "./StatusFlowNode.vue";
@@ -208,12 +209,12 @@ function nodeDataForStatus(status: TaskStatusNode) {
   const isCancel =
     status.slug === "cancel" || status.name.trim().toLowerCase() === "cancel";
   return {
-    name: status.name,
+    name: statusDisplayName(status),
     color: status.color,
     slug: status.slug,
     columnName: status.column_name,
     isInitial: status.is_initial,
-    isTerminal: status.is_terminal,
+    isTerminal: isTerminalStatus(status),
     creationOnly: Boolean(status.rules.creation_only),
     hasCancelOut: cancelSourceIds.value.has(nodeId),
     isCancelNode: isCancel,

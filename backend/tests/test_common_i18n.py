@@ -22,6 +22,12 @@ def test_i18n_russian_locale():
     settings.save(update_fields=["language", "updated_at"])
     assert get_locale() == "ru"
     assert t("telegram.button.done") == "Выполнено"
+    assert t("defaults.status.open") == "Открыта"
+    assert t("defaults.status.process") == "В работе"
+    assert t("defaults.status.cancel") == "Отменена"
+    assert t("defaults.status.open") == "Открыта"
+    assert t("defaults.status.process") == "В работе"
+    assert t("defaults.status.cancel") == "Отменена"
 
 
 def test_i18n_explicit_locale_overrides_project_settings():

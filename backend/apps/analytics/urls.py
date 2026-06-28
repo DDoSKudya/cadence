@@ -7,6 +7,7 @@ from apps.analytics.views import (
     AnalyticsExportDetailView,
     AnalyticsExportDownloadView,
     AnalyticsExportListCreateView,
+    AnalyticsExportPreviewView,
     AnalyticsNotificationsView,
     AnalyticsSummaryView,
     AnalyticsTaskFlowView,
@@ -44,6 +45,11 @@ urlpatterns = [
     ),
     path(
         "analytics/archive/", AnalyticsArchiveView.as_view(), name="analytics-archive"
+    ),
+    path(
+        "analytics/exports/preview/",
+        AnalyticsExportPreviewView.as_view(),
+        name="analytics-export-preview",
     ),
     path(
         "analytics/exports/",

@@ -15,6 +15,7 @@ import {
 import type { SettingsColumn } from "@/features/settings/types";
 import type { TaskStatusGraph } from "@/features/settings/task-status-graph";
 import { columnDotStyle, columnPreviewLaneStyle } from "@/lib/column-color";
+import { statusDisplayName } from "@/lib/workflow-labels";
 
 const props = defineProps<{
   mode: "create" | "edit";
@@ -53,7 +54,7 @@ const attachedStatusNames = computed(() => {
   const ids = new Set(boundStatusIds.value);
   return props.statusGraph.statuses
     .filter((status) => status.id !== null && ids.has(status.id))
-    .map((status) => status.name);
+    .map((status) => statusDisplayName(status));
 });
 
 const previewStyle = computed(() =>

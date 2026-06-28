@@ -20,8 +20,16 @@ class NotificationDispatchError(Exception):
 class NotificationDispatchService:
     @staticmethod
     def send(notification_job_id: int, background_job_id: int | None = None) -> dict:
-        notification = NotificationJob.objects.select_related("task").get(
-            pk=notification_job_id,
+        notification = (
+            NotificationJob.objects.select_related(
+                "task",
+                "task__column",
+                "task__task_status",
+            )
+            .prefetch_related("task__tags")
+            .get(
+                pk=notification_job_id,
+            )
         )
         if notification.status != NotificationStatus.PENDING:
             return {"skipped": notification.status}
@@ -47,7 +55,7 @@ class NotificationDispatchService:
     def _deliver(notification: NotificationJob) -> str:
         bot = get_bot()
         keyboard = build_task_keyboard(
-            notification.task_id,
+            notification.task,
             notification.id,
         )
 
@@ -56,6 +64,8 @@ class NotificationDispatchService:
                 chat_id=notification.telegram_chat_id,
                 text=notification.message_text,
                 reply_markup=keyboard,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
             )
             return str(message.message_id)
 

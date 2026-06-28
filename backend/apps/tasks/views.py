@@ -9,7 +9,11 @@ from rest_framework.views import APIView
 from apps.boards.models import BoardColumn
 from apps.boards.services import ColumnSettingsService
 from apps.tasks.models import Task, TaskEvent
-from apps.tasks.selectors import active_tasks_for_board, build_board_payload
+from apps.tasks.selectors import (
+    active_tasks_for_board,
+    build_board_payload,
+    search_active_tasks,
+)
 from apps.tasks.serializers import (
     BoardResponseSerializer,
     TaskCloseSerializer,
@@ -27,6 +31,7 @@ from apps.tasks.services import (
     TaskUpdateInput,
     TaskUpdateService,
     create_task_from_request,
+    parse_task_link_inputs,
 )
 from apps.weeks.rollover import WeekRolloverService
 from apps.weeks.services import WeekService
@@ -38,6 +43,17 @@ class TaskListCreateView(APIView):
         week_value = request.query_params.get("week")
         week = WeekService.resolve_week(week_value)
 
+        query = request.query_params.get("q", "")
+        exclude_raw = request.query_params.get("exclude")
+        exclude_task_id = int(exclude_raw) if exclude_raw else None
+        if query.strip() or exclude_task_id is not None:
+            tasks = search_active_tasks(
+                board,
+                query=query,
+                exclude_task_id=exclude_task_id,
+            )
+            return Response(TaskSerializer(tasks, many=True).data)
+
         tasks = active_tasks_for_board(board, week)
         return Response(TaskSerializer(tasks, many=True).data)
 
@@ -46,6 +62,7 @@ class TaskListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         data = cast(TaskCreateData, serializer.validated_data)
         task = create_task_from_request(request, data)
+        task = TaskDetailView._load_task(task.pk)
         return Response(
             TaskSerializer(task).data,
             status=status.HTTP_201_CREATED,
@@ -53,13 +70,21 @@ class TaskListCreateView(APIView):
 
 
 class TaskDetailView(APIView):
-    def get_object(self, pk: int) -> Task:
+    @staticmethod
+    def _load_task(pk: int) -> Task:
         board = ColumnSettingsService.get_default_board()
         return get_object_or_404(
-            Task.objects.select_related("week", "task_status").prefetch_related("tags"),
+            Task.objects.select_related("week", "task_status").prefetch_related(
+                "tags",
+                "outgoing_links__to_task",
+                "incoming_links__from_task",
+            ),
             pk=pk,
             board=board,
         )
+
+    def get_object(self, pk: int) -> Task:
+        return self._load_task(pk)
 
     def get(self, request: Request, pk: int):
         task = self.get_object(pk)
@@ -86,26 +111,35 @@ class TaskDetailView(APIView):
             "reminder_interval_minutes" in data
             and data["reminder_interval_minutes"] is None
         )
+        clear_story_points = "story_points" in data and data["story_points"] is None
 
         update_input = TaskUpdateInput(
             request=request,
             title=data.get("title"),
             description=data.get("description"),
+            task_type=data.get("task_type"),
             priority=data.get("priority"),
             week=week,
             week_provided=week_provided,
             clear_week=clear_week,
             due_at=data.get("due_at"),
             clear_due_at=clear_due_at,
-            evidence_url=data.get("evidence_url"),
             reminder_enabled=data.get("reminder_enabled"),
             reminder_interval_minutes=data.get("reminder_interval_minutes"),
             clear_reminder_interval=clear_reminder_interval,
             tag_slugs=data.get("tags"),
             task_status_id=data.get("task_status_id"),
             task_status_provided="task_status_id" in data,
+            story_points=data.get("story_points"),
+            clear_story_points=clear_story_points,
+            external_ref=data.get("external_ref"),
+            links=(
+                parse_task_link_inputs(data.get("links")) if "links" in data else None
+            ),
+            links_provided="links" in data,
         )
         task = TaskUpdateService.update(task, update_input)
+        task = self._load_task(task.pk)
         return Response(TaskSerializer(task).data)
 
 
@@ -139,7 +173,6 @@ class TaskCloseView(APIView):
         task = TaskCloseService.close(
             task,
             completion_note=serializer.validated_data.get("completion_note", ""),
-            evidence_url=serializer.validated_data.get("evidence_url"),
             request=request,
         )
         return Response(TaskSerializer(task).data)

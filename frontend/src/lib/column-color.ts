@@ -72,3 +72,12 @@ export function columnCountStyle(color: string): Record<string, string> {
 export function columnPreviewLaneStyle(color: string): Record<string, string> {
   return { borderTopColor: colorToHex(color) };
 }
+
+export function tagChipStyle(color: string): Record<string, string> {
+  const hex = colorToHex(color);
+  return {
+    "--tag-chip-border": `color-mix(in srgb, ${hex} 38%, white)`,
+    "--tag-chip-bg": `color-mix(in srgb, ${hex} 14%, white)`,
+    "--tag-chip-text": `color-mix(in srgb, ${hex} 72%, #1e293b)`,
+  };
+}

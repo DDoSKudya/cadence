@@ -3,8 +3,9 @@ import { computed } from "vue";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 
 import type { TaskStatusNode } from "@/features/settings/task-status-graph";
-import { statusNodeKey } from "@/features/settings/task-status-graph";
+import { statusNodeKey, isTerminalStatus } from "@/features/settings/task-status-graph";
 import { columnDotStyle } from "@/lib/column-color";
+import { statusDisplayName } from "@/lib/workflow-labels";
 
 const props = defineProps<{
   statuses: TaskStatusNode[];
@@ -116,13 +117,16 @@ function onDragStart(event: DragEvent, status: TaskStatusNode) {
             >
               <span class="status-flow-palette-dot" :style="columnDotStyle(status.color)" />
               <span class="status-flow-palette-item-copy">
-                <span class="status-flow-palette-item-name">{{ status.name }}</span>
-                <span v-if="status.is_initial || status.is_terminal" class="status-flow-palette-badges">
+                <span class="status-flow-palette-item-name">{{ statusDisplayName(status) }}</span>
+                <span
+                  v-if="status.is_initial || isTerminalStatus(status)"
+                  class="status-flow-palette-badges"
+                >
                   <span v-if="status.is_initial" class="status-flow-palette-badge">
                     {{ $t("settings.statusFlowInitial") }}
                   </span>
                   <span
-                    v-if="status.is_terminal"
+                    v-if="isTerminalStatus(status)"
                     class="status-flow-palette-badge status-flow-palette-badge-terminal"
                   >
                     {{ $t("settings.statusFlowTerminal") }}

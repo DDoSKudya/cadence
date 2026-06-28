@@ -55,3 +55,7 @@ export function setI18nLocale(locale: AppLocale) {
   i18n.global.locale.value = locale;
   document.documentElement.lang = locale;
 }
+
+export function getI18nLocale(): AppLocale {
+  return i18n.global.locale.value as AppLocale;
+}

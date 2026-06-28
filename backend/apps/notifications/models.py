@@ -20,6 +20,7 @@ class NotificationReason(models.TextChoices):
 class CallbackAction(models.TextChoices):
     TASK_DONE = "task_done", "Task done"
     TASK_IN_PROGRESS = "task_in_progress", "Task in progress"
+    TASK_SET_STATUS = "task_set_status", "Set task status"
     TASK_SNOOZE = "task_snooze", "Task snooze"
     TASK_CANCEL_REMINDERS = "task_cancel_reminders", "Cancel reminders"
 

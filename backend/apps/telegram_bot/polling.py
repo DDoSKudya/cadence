@@ -15,6 +15,7 @@ router = Router()
 CALLBACK_STATUS_KEYS = {
     "closed": "telegram.callback.status.closed",
     "in_progress": "telegram.callback.status.inProgress",
+    "status_updated": "telegram.callback.status.updated",
     "snoozed": "telegram.callback.status.snoozed",
     "reminders_cancelled": "telegram.callback.status.remindersCancelled",
     "already_closed": "telegram.callback.status.alreadyClosed",
@@ -43,7 +44,9 @@ async def handle_callback(callback: CallbackQuery) -> None:
         return
 
     try:
-        action, task_id, notification_job_id = parse_callback_data(callback.data)
+        action, task_id, notification_job_id, status_id = parse_callback_data(
+            callback.data,
+        )
     except ValueError:
         await callback.answer(t("telegram.callback.invalidRequest"))
         return
@@ -56,6 +59,7 @@ async def handle_callback(callback: CallbackQuery) -> None:
             action=action,
             task_id=task_id,
             notification_job_id=notification_job_id,
+            status_id=status_id,
         )
     except TelegramActionError:
         await callback.answer(t("telegram.callback.processingError"), show_alert=True)
@@ -73,6 +77,7 @@ async def handle_callback(callback: CallbackQuery) -> None:
                 await callback.message.edit_text(
                     f"{original}{footer}",
                     reply_markup=None,
+                    parse_mode="HTML",
                 )
 
 

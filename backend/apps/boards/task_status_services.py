@@ -86,7 +86,7 @@ WORKFLOW_STATUS_LAYOUT: tuple[StatusLayoutDef, ...] = (
         760,
         300,
         False,
-        False,
+        True,
         SystemType.READY,
         {"auto_move_column": True},
     ),
@@ -496,6 +496,30 @@ class TaskStatusService:
             TaskStatus.objects.filter(board=board, is_initial=True, on_flow=True)
             .order_by("position")
             .first()
+        )
+
+    @staticmethod
+    def list_allowed_targets(
+        *,
+        board: Board,
+        from_status: TaskStatus | None,
+    ) -> list[TaskStatus]:
+        if from_status is None or from_status.is_terminal:
+            return []
+
+        if not TaskStatusService.is_enforced(board):
+            return list(
+                TaskStatus.objects.filter(board=board, on_flow=True)
+                .exclude(id=from_status.id)
+                .order_by("position"),
+            )
+
+        to_ids = TaskStatusTransition.objects.filter(
+            board=board,
+            from_status=from_status,
+        ).values_list("to_status_id", flat=True)
+        return list(
+            TaskStatus.objects.filter(id__in=to_ids, on_flow=True).order_by("position"),
         )
 
     @staticmethod

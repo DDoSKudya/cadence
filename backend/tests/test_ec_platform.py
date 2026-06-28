@@ -50,25 +50,34 @@ def test_platform_ec_service_logs_endpoint_returns_entries(session_client):
 
 @pytest.mark.django_db
 def test_platform_ec_service_logs_newest_first():
+    from datetime import timedelta
+    from uuid import uuid4
+
+    from django.utils import timezone as dj_timezone
+
     from apps.common.service_logs import get_service_logs, record_service_log
 
+    token = uuid4().hex[:8]
+    older_message = f"older log {token}"
+    newer_message = f"newer log {token}"
+    now = dj_timezone.now()
     record_service_log(
         "api",
         "INFO",
-        "older log",
+        older_message,
         source="process",
-        logged_at="2020-01-01T10:00:00+00:00",
+        logged_at=(now - timedelta(seconds=1)).isoformat(),
     )
     record_service_log(
         "api",
         "INFO",
-        "newer log",
+        newer_message,
         source="process",
-        logged_at="2025-06-01T10:00:00+00:00",
+        logged_at=now.isoformat(),
     )
-    entries = get_service_logs("api")
-    messages = [entry["message"] for entry in entries]
-    assert messages.index("newer log") < messages.index("older log")
+    entries = get_service_logs("api", limit=500)
+    ours = [entry for entry in entries if token in entry["message"]]
+    assert [entry["message"] for entry in ours] == [newer_message, older_message]
 
 
 @pytest.mark.django_db
@@ -132,6 +141,7 @@ def test_platform_ec_openapi_schema_contains_core_paths(api_client):
     paths = response.json().get("paths", {})
     assert "/api/v1/tasks/" in paths
     assert "/api/v1/analytics/summary/" in paths
+    assert "/api/v1/analytics/exports/preview/" in paths
     assert "/api/v1/jobs/" in paths
 
 
@@ -172,10 +182,11 @@ def test_platform_ec_celery_logging_signal_handlers_call_logger():
 )
 def test_platform_ec_parse_callback_data_classes(value, is_valid):
     if is_valid:
-        action, task_id, notification_id = parse_callback_data(value)
+        action, task_id, notification_id, status_id = parse_callback_data(value)
         assert isinstance(action, str)
         assert task_id > 0
         assert notification_id is None or notification_id > 0
+        assert status_id is None or status_id > 0
     else:
         with pytest.raises(ValueError):
             parse_callback_data(value)
