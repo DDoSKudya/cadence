@@ -111,7 +111,8 @@
 
 .board-column-list {
   display: flex;
-  flex: none;
+  min-height: 2rem;
+  flex: 1;
   flex-direction: column;
   gap: 0.625rem;
 }
@@ -195,11 +196,15 @@
 
 .task-card-ghost {
   opacity: 0.4;
+  transition: none;
+  transform: none;
 }
 
 .task-card-drag {
   box-shadow: var(--shadow-card-hover);
   cursor: grabbing;
+  transition: none;
+  transform: none;
 }
 
 .task-meta-row {
