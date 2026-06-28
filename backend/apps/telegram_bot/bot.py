@@ -1,8 +1,10 @@
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from apps.boards.task_status_services import TaskStatusService
 from apps.common.i18n import t
 from apps.notifications.models import CallbackAction
+from apps.tasks.models import Task
 
 
 def get_bot() -> Bot:
@@ -20,43 +22,67 @@ def run_telegram_async(coro):
     return asyncio.run(coro)
 
 
-def build_task_keyboard(task_id: int, notification_job_id: int) -> InlineKeyboardMarkup:
-    suffix = f"{task_id}:{notification_job_id}"
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=t("telegram.button.done"),
-                    callback_data=f"{CallbackAction.TASK_DONE}:{suffix}",
-                ),
-                InlineKeyboardButton(
-                    text=t("telegram.button.inProgress"),
-                    callback_data=f"{CallbackAction.TASK_IN_PROGRESS}:{suffix}",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text=t("telegram.button.snooze"),
-                    callback_data=f"{CallbackAction.TASK_SNOOZE}:{suffix}",
-                ),
-                InlineKeyboardButton(
-                    text=t("telegram.button.disableReminders"),
-                    callback_data=f"{CallbackAction.TASK_CANCEL_REMINDERS}:{suffix}",
-                ),
-            ],
-        ],
+def build_task_keyboard(task: Task, notification_job_id: int) -> InlineKeyboardMarkup:
+    source_status = task.task_status
+    if source_status is None:
+        source_status = TaskStatusService.resolve_column_status(task.column)
+
+    targets = TaskStatusService.list_allowed_targets(
+        board=task.board,
+        from_status=source_status,
     )
 
+    rows: list[list[InlineKeyboardButton]] = []
+    status_row: list[InlineKeyboardButton] = []
+    for target in targets[:6]:
+        status_row.append(
+            InlineKeyboardButton(
+                text=target.name,
+                callback_data=(
+                    f"{CallbackAction.TASK_SET_STATUS}:"
+                    f"{task.id}:{target.id}:{notification_job_id}"
+                ),
+            ),
+        )
+        if len(status_row) == 2:
+            rows.append(status_row)
+            status_row = []
+    if status_row:
+        rows.append(status_row)
 
-def parse_callback_data(data: str) -> tuple[str, int, int | None]:
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t("telegram.button.snooze"),
+                callback_data=f"{CallbackAction.TASK_SNOOZE}:{task.id}:{notification_job_id}",
+            ),
+            InlineKeyboardButton(
+                text=t("telegram.button.disableReminders"),
+                callback_data=(
+                    f"{CallbackAction.TASK_CANCEL_REMINDERS}:{task.id}:{notification_job_id}"
+                ),
+            ),
+        ],
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def parse_callback_data(data: str) -> tuple[str, int, int | None, int | None]:
     parts = data.split(":")
     if len(parts) < 2:
         raise ValueError("Invalid callback data")
 
     action = parts[0]
     task_id = int(parts[1])
-    notification_job_id = int(parts[2]) if len(parts) > 2 and parts[2] else None
-    return action, task_id, notification_job_id
+    if action == CallbackAction.TASK_SET_STATUS:
+        if len(parts) < 4:
+            raise ValueError("Invalid callback data")
+        status_id = int(parts[2])
+        set_status_job_id = int(parts[3])
+        return action, task_id, set_status_job_id, status_id
+
+    optional_job_id = int(parts[2]) if len(parts) > 2 and parts[2] else None
+    return action, task_id, optional_job_id, None
 
 
 def build_start_reply(*, chat_id: int, chat_type: str) -> str:

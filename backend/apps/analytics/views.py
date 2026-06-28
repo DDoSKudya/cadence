@@ -1,13 +1,20 @@
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.analytics import selectors
 from apps.analytics.constants import DEFAULT_WEEKS_COUNT, MAX_WEEKS_COUNT
+from apps.analytics.export_preview import collect_export_preview
 from apps.analytics.filters import parse_filters, period_label
-from apps.analytics.models import AnalyticsExportJob, ExportStatus
+from apps.analytics.models import AnalyticsExportJob, ExportStatus, ExportType
+from apps.analytics.schema import (
+    ANALYTICS_FILTER_PARAMETERS,
+    AnalyticsExportListResponseSerializer,
+    AnalyticsExportPreviewResponseSerializer,
+)
 from apps.analytics.serializers import (
     AnalyticsExportCreateSerializer,
     AnalyticsExportSerializer,
@@ -68,6 +75,25 @@ class AnalyticsArchiveView(APIView):
 
 
 class AnalyticsExportListCreateView(APIView):
+    @extend_schema(
+        tags=["analytics"],
+        summary="List analytics export jobs",
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+            ),
+        ],
+        responses={200: AnalyticsExportListResponseSerializer},
+    )
     def get(self, request):
         page = parse_int_param(
             request.query_params.get("page"), 1, minimum=1, maximum=10_000
@@ -91,6 +117,12 @@ class AnalyticsExportListCreateView(APIView):
             },
         )
 
+    @extend_schema(
+        tags=["analytics"],
+        summary="Create analytics export job",
+        request=AnalyticsExportCreateSerializer,
+        responses={201: AnalyticsExportSerializer},
+    )
     def post(self, request):
         serializer = AnalyticsExportCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -110,12 +142,25 @@ class AnalyticsExportListCreateView(APIView):
 
 
 class AnalyticsExportDetailView(APIView):
+    @extend_schema(
+        tags=["analytics"],
+        summary="Get analytics export job",
+        responses={200: AnalyticsExportSerializer},
+    )
     def get(self, request, pk: int):
         export_job = get_object_or_404(AnalyticsExportJob, pk=pk)
         return Response(AnalyticsExportSerializer(export_job).data)
 
 
 class AnalyticsExportDownloadView(APIView):
+    @extend_schema(
+        tags=["analytics"],
+        summary="Download analytics export file",
+        responses={
+            200: OpenApiResponse(description="CSV, XLSX, or PDF file attachment."),
+            409: OpenApiResponse(description="Export is not ready for download."),
+        },
+    )
     def get(self, request, pk: int):
         export_job = get_object_or_404(AnalyticsExportJob, pk=pk)
         if export_job.status != ExportStatus.SUCCEEDED:
@@ -127,3 +172,50 @@ class AnalyticsExportDownloadView(APIView):
         path = AnalyticsExportService.resolve_download_path(export_job)
         filename = path.name
         return FileResponse(path.open("rb"), as_attachment=True, filename=filename)
+
+
+class AnalyticsExportPreviewView(APIView):
+    @extend_schema(
+        tags=["analytics"],
+        summary="Preview analytics export layout",
+        description=(
+            "Returns tabular sheet data for the export dialog. "
+            "Layout matches styled XLSX and PDF exports."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="export_type",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                enum=[choice.value for choice in ExportType],
+            ),
+            *ANALYTICS_FILTER_PARAMETERS,
+            OpenApiParameter(
+                name="locale",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Export locale (`ru` or `en`).",
+            ),
+        ],
+        responses={
+            200: AnalyticsExportPreviewResponseSerializer,
+            400: OpenApiResponse(description="Invalid export_type."),
+        },
+    )
+    def get(self, request):
+        export_type = request.query_params.get("export_type", "")
+        allowed = {choice.value for choice in ExportType}
+        if export_type not in allowed:
+            return Response(
+                {"detail": "Invalid export_type."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        filters = parse_filters(request)
+        sheets = collect_export_preview(
+            export_type,
+            filters,
+            locale=request.query_params.get("locale"),
+        )
+        return Response({"export_type": export_type, "sheets": sheets})

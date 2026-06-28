@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from django.urls import reverse
 
@@ -50,6 +52,17 @@ def test_analytics_ec_all_api_endpoints_return_200(
         params["group_by"] = "tag"
     response = api_client.get(reverse(endpoint_name), params)
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_analytics_ec_notifications_include_scheme_status_actions(
+    api_client, analytics_task_data
+):
+    response = api_client.get(reverse("analytics-notifications"))
+    assert response.status_code == 200
+    payload = response.json()
+    assert "telegram_actions" in payload
+    assert isinstance(payload["telegram_actions"], list)
 
 
 @pytest.mark.django_db
@@ -121,6 +134,134 @@ def test_analytics_ec_export_all_types_csv(
 
 
 @pytest.mark.django_db
+def test_analytics_ec_export_tasks_xlsx_matches_preview_layout(
+    media_root, analytics_task_data
+):
+    from django.conf import settings
+    from openpyxl import load_workbook
+
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=ExportType.TASKS,
+        file_format=FileFormat.XLSX,
+        status=ExportStatus.PENDING,
+        filters={"locale": "ru"},
+    )
+    relative_path, rows = export_report(export_job)
+    assert str(relative_path).endswith(".xlsx")
+    assert rows >= 0
+
+    workbook = load_workbook(settings.MEDIA_ROOT / relative_path)
+    assert len(workbook.sheetnames) >= 2
+    overview = workbook[workbook.sheetnames[0]]
+    title_values = [
+        overview.cell(1, column).value
+        for column in range(1, 13)
+        if overview.cell(1, column).value
+    ]
+    assert any(value in {"Обзор", "Overview"} for value in title_values)
+
+    header_row = None
+    header_col = None
+    for row_index in range(1, 30):
+        for column_index in range(1, 13):
+            if overview.cell(row_index, column_index).value in {"Колонка", "Column"}:
+                header_row = row_index
+                header_col = column_index
+                break
+        if header_row is not None:
+            break
+    assert header_row is not None
+    assert header_col is not None
+    assert overview.cell(header_row, header_col).fill.fgColor.rgb in {
+        "001E40AF",
+        "FF1E40AF",
+    }
+    header_values = {
+        overview.cell(header_row, column).value
+        for column in range(1, 15)
+        if overview.cell(header_row, column).value
+    }
+    assert {"Количество", "Count"} & header_values
+    assert len(overview._charts) == 1
+
+    tasks_sheet = workbook[workbook.sheetnames[1]]
+    tasks_header_row = None
+    tasks_header_col = None
+    for row_index in range(1, 30):
+        for column_index in range(1, 20):
+            if tasks_sheet.cell(row_index, column_index).value in {"ID", "id"}:
+                tasks_header_row = row_index
+                tasks_header_col = column_index
+                break
+        if tasks_header_row is not None:
+            break
+    assert tasks_header_row is not None
+    assert tasks_header_col is not None
+    header_values = {
+        tasks_sheet.cell(tasks_header_row, column).value
+        for column in range(tasks_header_col, tasks_header_col + 15)
+        if tasks_sheet.cell(tasks_header_row, column).value
+    }
+    assert tasks_sheet.cell(tasks_header_row, tasks_header_col + 1).value in {
+        "Название",
+        "Title",
+    }
+    assert "evidence_url" not in header_values
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_preview_notifications_matches_export_rows(
+    api_client, media_root, analytics_task_data
+):
+    from django.utils import timezone
+
+    from apps.notifications.models import NotificationJob
+    from apps.tasks.models import Task
+
+    task = Task.objects.get(pk=analytics_task_data["task_id"])
+    NotificationJob.objects.create(
+        task=task,
+        status="succeeded",
+        reason="reminder",
+        telegram_chat_id=597181229,
+        scheduled_at=timezone.now(),
+    )
+    response = api_client.get(
+        reverse("analytics-export-preview"),
+        {"export_type": ExportType.NOTIFICATION_REPORT, "locale": "ru"},
+    )
+    assert response.status_code == 200
+    sheets = {sheet["id"]: sheet for sheet in response.json()["sheets"]}
+    assert sheets["notifications"]["total"] >= 1
+    assert sheets["notifications"]["rows"]
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_xlsx_empty_table_shows_no_data_message(media_root):
+    from django.conf import settings
+    from openpyxl import load_workbook
+
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=ExportType.TAG_SUMMARY,
+        file_format=FileFormat.XLSX,
+        status=ExportStatus.PENDING,
+        filters={"locale": "ru", "tags": ["__no_such_tag__"]},
+    )
+    relative_path, rows = export_report(export_job)
+    assert rows == 0
+
+    workbook = load_workbook(settings.MEDIA_ROOT / relative_path)
+    sheet = workbook[workbook.sheetnames[0]]
+    cell_values = [
+        sheet.cell(row_index, column).value
+        for row_index in range(1, 25)
+        for column in range(1, 15)
+        if sheet.cell(row_index, column).value
+    ]
+    assert any("Данные не найдены" in str(value) for value in cell_values)
+
+
+@pytest.mark.django_db
 def test_analytics_ec_export_weekly_summary_xlsx(media_root, analytics_task_data):
     export_job = AnalyticsExportJob.objects.create(
         export_type=ExportType.WEEKLY_SUMMARY,
@@ -134,7 +275,66 @@ def test_analytics_ec_export_weekly_summary_xlsx(media_root, analytics_task_data
 
 
 @pytest.mark.django_db
-def test_analytics_ec_export_service_invalid_type_rejected():
+@pytest.mark.parametrize(
+    "export_type",
+    [
+        pytest.param(ExportType.TASKS, id="ec_export_tasks_pdf"),
+        pytest.param(ExportType.WEEKLY_SUMMARY, id="ec_export_weekly_summary_pdf"),
+        pytest.param(ExportType.TAG_SUMMARY, id="ec_export_tag_summary_pdf"),
+    ],
+)
+def test_analytics_ec_export_pdf_generates_valid_file(
+    media_root, analytics_task_data, export_type
+):
+    from django.conf import settings
+
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=export_type,
+        file_format=FileFormat.PDF,
+        status=ExportStatus.PENDING,
+        filters={"locale": "ru"},
+    )
+    relative_path, rows = export_report(export_job)
+    assert str(relative_path).endswith(".pdf")
+    assert rows >= 0
+
+    pdf_bytes = (settings.MEDIA_ROOT / relative_path).read_bytes()
+    assert pdf_bytes.startswith(b"%PDF")
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_pdf_empty_table(media_root):
+    from django.conf import settings
+
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=ExportType.TAG_SUMMARY,
+        file_format=FileFormat.PDF,
+        status=ExportStatus.PENDING,
+        filters={"locale": "ru", "tags": ["__no_such_tag__"]},
+    )
+    relative_path, rows = export_report(export_job)
+    assert rows == 0
+    pdf_bytes = (settings.MEDIA_ROOT / relative_path).read_bytes()
+    assert pdf_bytes.startswith(b"%PDF")
+    assert len(pdf_bytes) > 500
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_filename_includes_metadata(media_root, week_key):
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=ExportType.WEEKLY_SUMMARY,
+        file_format=FileFormat.XLSX,
+        status=ExportStatus.PENDING,
+        filters={"week": week_key, "tags": ["analytics"], "source": "api"},
+    )
+    relative_path, _ = export_report(export_job)
+    filename = relative_path.name
+    assert filename.startswith("weekly_summary_")
+    assert week_key in filename
+    assert "tags-analytics" in filename
+    assert "source-api" in filename
+    assert filename.endswith(".xlsx")
+    assert re.search(r"_\d{4}-\d{2}-\d{2}_\d{4}\.xlsx$", filename)
     with pytest.raises(ValueError):
         AnalyticsExportService.create(
             export_type="invalid", file_format=FileFormat.CSV, filters={}

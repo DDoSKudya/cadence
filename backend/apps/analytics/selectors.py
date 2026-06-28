@@ -17,9 +17,11 @@ from apps.analytics.constants import (
     STALE_ITEMS_LIMIT,
 )
 from apps.analytics.filters import AnalyticsFilters, period_bounds, resolve_tag_ids
-from apps.boards.models import SystemType
+from apps.boards.models import SystemType, TaskStatus
+from apps.boards.scheme_services import BoardSchemeService
 from apps.boards.services import ColumnSettingsService
 from apps.core.models import ProjectSettings, Tag
+from apps.core.tag_services import TagService
 from apps.notifications.models import (
     CallbackAction,
     NotificationJob,
@@ -72,6 +74,7 @@ def get_summary(filters: AnalyticsFilters) -> dict:
         "stale_tasks": stale_count,
         "evidence_rate": round(evidence_rate, 4),
         "stale_items": stale_items,
+        **_active_scheme_meta(board),
     }
 
 
@@ -167,28 +170,31 @@ def get_cycle_time(filters: AnalyticsFilters) -> dict:
 
 
 def get_notifications(filters: AnalyticsFilters) -> dict:
+    board = ColumnSettingsService.get_default_board()
     period_start, period_end = period_bounds(filters)
-    jobs = _filter_datetime(
-        NotificationJob.objects.all(), "created_at", period_start, period_end
-    )
-    callbacks = _filter_datetime(
-        TelegramCallbackLog.objects.all(),
-        "created_at",
+    task_ids = _scoped_task_ids(board, filters)
+
+    jobs = NotificationJob.objects.filter(task_id__in=task_ids)
+    jobs = _filter_datetime(jobs, "created_at", period_start, period_end)
+    callbacks = TelegramCallbackLog.objects.filter(task_id__in=task_ids)
+    callbacks = _filter_datetime(callbacks, "created_at", period_start, period_end)
+
+    sent = jobs.filter(status=NotificationStatus.SUCCEEDED).count()
+    failures = jobs.filter(status=NotificationStatus.FAILED).count()
+    telegram_actions = _aggregate_telegram_actions(board, callbacks)
+    done_actions = _telegram_action_count(telegram_actions, "done")
+    in_progress_actions = _telegram_action_count(telegram_actions, "process")
+    closed_after = _tasks_closed_after_notification(
+        board,
+        task_ids,
         period_start,
         period_end,
     )
 
-    sent = jobs.filter(status=NotificationStatus.SUCCEEDED).count()
-    failures = jobs.filter(status=NotificationStatus.FAILED).count()
-    done_actions = callbacks.filter(action=CallbackAction.TASK_DONE).count()
-    in_progress_actions = callbacks.filter(
-        action=CallbackAction.TASK_IN_PROGRESS
-    ).count()
-    closed_after = _tasks_closed_after_notification(period_start, period_end)
-
     return {
         "notifications_sent": sent,
         "notification_failures": failures,
+        "telegram_actions": telegram_actions,
         "telegram_done_actions": done_actions,
         "telegram_in_progress_actions": in_progress_actions,
         "tasks_closed_after_notification": closed_after,
@@ -261,7 +267,7 @@ def get_archive_analytics(filters: AnalyticsFilters) -> dict:
     ]
 
     tag_rows = (
-        Tag.objects.filter(tasks__in=scoped)
+        Tag.objects.filter(scheme=TagService.get_active_scheme(), tasks__in=scoped)
         .annotate(count=Count("tasks", distinct=True))
         .order_by("-count", "name")
         .values("name", "count")[:20]
@@ -340,6 +346,7 @@ def _stale_task_items(queryset: QuerySet[Task]) -> list[dict]:
                 "id": task.id,
                 "title": task.title,
                 "column": task.column.name,
+                "column_system_type": task.column.system_type,
                 "days_in_column": round(delta.total_seconds() / 86400, 1),
             },
         )
@@ -347,8 +354,9 @@ def _stale_task_items(queryset: QuerySet[Task]) -> list[dict]:
 
 
 def _breakdown_by_tag(queryset: QuerySet[Task]) -> list[dict]:
+    scheme = TagService.get_active_scheme()
     rows = (
-        Tag.objects.filter(tasks__in=queryset)
+        Tag.objects.filter(scheme=scheme, tasks__in=queryset)
         .annotate(count=Count("tasks", distinct=True))
         .order_by("-count", "name")
         .values("name", "count")
@@ -364,7 +372,8 @@ def _breakdown_by_column(queryset: QuerySet[Task]) -> list[dict]:
     )
     return [
         {
-            "key": row["column__name"],
+            "key": row["column__system_type"] or row["column__name"],
+            "name": row["column__name"],
             "system_type": row["column__system_type"],
             "count": row["count"],
         }
@@ -379,10 +388,10 @@ def _breakdown_by_source(queryset: QuerySet[Task]) -> list[dict]:
 
 def _cycle_time_distribution(queryset: QuerySet[Task]) -> list[dict]:
     buckets = [
-        ("0-1d", timedelta(days=1)),
-        ("1-3d", timedelta(days=3)),
-        ("3-7d", timedelta(days=7)),
-        ("7d+", None),
+        ("bucket_0_1d", timedelta(days=1)),
+        ("bucket_1_3d", timedelta(days=3)),
+        ("bucket_3_7d", timedelta(days=7)),
+        ("bucket_7d_plus", None),
     ]
     items: list[dict] = []
     for label, upper in buckets:
@@ -394,9 +403,9 @@ def _cycle_time_distribution(queryset: QuerySet[Task]) -> list[dict]:
         )
         if upper is None:
             count = durations.filter(duration__gte=timedelta(days=7)).count()
-        elif label == "0-1d":
+        elif label == "bucket_0_1d":
             count = durations.filter(duration__lt=upper).count()
-        elif label == "1-3d":
+        elif label == "bucket_1_3d":
             count = durations.filter(
                 duration__gte=timedelta(days=1),
                 duration__lt=upper,
@@ -438,12 +447,67 @@ def _carry_over_count(active_qs: QuerySet[Task], current: Week) -> int:
     )
 
 
+def _active_scheme_meta(board) -> dict:
+    scheme = BoardSchemeService.get_active_scheme(board)
+    if scheme is None:
+        return {}
+    return {
+        "scheme": {
+            "slug": scheme.slug,
+            "name": scheme.name,
+        },
+    }
+
+
+def _scoped_task_ids(board, filters: AnalyticsFilters) -> list[int]:
+    queryset = _apply_filters(Task.objects.filter(board=board), filters, period=False)
+    return list(queryset.values_list("id", flat=True))
+
+
+def _aggregate_telegram_actions(board, callbacks) -> list[dict]:
+    statuses = list(
+        TaskStatus.objects.filter(board=board, on_flow=True).order_by("position"),
+    )
+    counts: dict[str, int] = {status.slug: 0 for status in statuses}
+    status_by_id = {status.id: status.slug for status in statuses}
+
+    for log in callbacks.only("action", "payload"):
+        if log.action == CallbackAction.TASK_SET_STATUS:
+            payload = log.payload or {}
+            status_id = payload.get("status_id")
+            if status_id is None:
+                continue
+            slug = status_by_id.get(int(status_id))
+            if slug is not None:
+                counts[slug] = counts.get(slug, 0) + 1
+        elif log.action == CallbackAction.TASK_DONE:
+            counts["done"] = counts.get("done", 0) + 1
+        elif log.action == CallbackAction.TASK_IN_PROGRESS:
+            counts["process"] = counts.get("process", 0) + 1
+
+    return [
+        {"slug": slug, "count": count} for slug, count in counts.items() if count > 0
+    ]
+
+
+def _telegram_action_count(actions: list[dict], slug: str) -> int:
+    return next((item["count"] for item in actions if item["slug"] == slug), 0)
+
+
 def _tasks_closed_after_notification(
+    board,
+    task_ids: list[int],
     period_start: datetime | None,
     period_end: datetime | None,
 ) -> int:
-    board = ColumnSettingsService.get_default_board()
-    closed = Task.objects.filter(board=board, closed_at__isnull=False)
+    if not task_ids:
+        return 0
+
+    closed = Task.objects.filter(
+        board=board,
+        id__in=task_ids,
+        closed_at__isnull=False,
+    )
     closed = _filter_datetime(closed, "closed_at", period_start, period_end)
 
     count = 0

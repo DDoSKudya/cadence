@@ -530,6 +530,7 @@ def test_boards_ec_status_workflow_default_scheme_is_enforced(
     assert all(item["on_flow"] for item in payload["statuses"])
     assert statuses_by_slug["open"]["is_initial"] is True
     assert statuses_by_slug["done"]["is_terminal"] is True
+    assert statuses_by_slug["cancel"]["is_terminal"] is True
     assert statuses_by_slug["open"]["column_id"] == planned_column.id
     assert statuses_by_slug["process"]["column_id"] == in_progress_column.id
     assert statuses_by_slug["done"]["column_id"] == ready_column.id

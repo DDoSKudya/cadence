@@ -26,7 +26,7 @@
 
 ## 1. О проекте
 
-**Cadence** (v1.0.0) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
+**Cadence** (v1.1.0) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
 
 ### Целевой пользователь
 
@@ -75,6 +75,8 @@
 | psycopg 3 | PostgreSQL driver |
 | gunicorn | WSGI server |
 | openpyxl | XLSX-экспорт аналитики |
+| weasyprint | PDF-экспорт аналитики |
+| matplotlib | диаграммы в XLSX/PDF-экспорте |
 
 **Dev:** pytest, pytest-django, pytest-cov, ruff, mypy, factory-boy, time-machine
 **Менеджер пакетов:** [uv](https://docs.astral.sh/uv/)
@@ -347,7 +349,7 @@ pending/ → processing/ → processed/ | failed/
 | `notification_scan` | Планирование напоминаний |
 | `telegram_send` | Отправка в Telegram |
 | `telegram_callback` | Обработка callback (логируется) |
-| `analytics_export` | Генерация CSV/XLSX |
+| `analytics_export` | Генерация CSV/XLSX/PDF |
 
 **Сервис:** `JobService.create/mark_processing/succeed/fail/retry`
 
@@ -369,7 +371,9 @@ pending/ → processing/ → processed/ | failed/
 
 **Типы экспорта:** `tasks`, `archive`, `weekly_summary`, `tag_summary`, `notification_report`, `jobs_report`, `imports_report`
 
-**Слои:** `selectors.py` (агрегации), `exporters.py` (CSV/XLSX), `services.py` (оркестрация)
+**Форматы:** `csv`, `xlsx`, `pdf`
+
+**Слои:** `selectors.py` (агрегации), `export_data.py` (строки отчётов), `exporters.py` (writers), `export_preview.py` (preview API), `xlsx_builder.py` / `pdf_builder.py`, `export_filenames.py`, `services.py` (оркестрация)
 
 ### `telegram_bot` — бот
 
@@ -567,14 +571,16 @@ sequenceDiagram
     participant Exp as exporters.py
     participant Media as media/exports/
 
-    UI->>API: export_type, format, filters
+    UI->>API: export_type, format (csv|xlsx|pdf), filters
     API->>Job: analytics_export PENDING
     Job->>Celery: enqueue (queue reports)
-    Celery->>Exp: build CSV/XLSX
-    Exp->>Media: write file
+    Celery->>Exp: build CSV/XLSX/PDF
+    Exp->>Media: write file (structured filename)
     Celery->>Job: SUCCEEDED
     UI->>API: GET .../download/
 ```
+
+**Preview:** `GET /api/v1/analytics/exports/preview/` — те же фильтры и `export_type`, ответ с листами (`sheets[]`) для UI; макет совпадает со styled XLSX/PDF.
 
 Retention: 14 дней (`AnalyticsExportJob`).
 
@@ -641,7 +647,7 @@ frontend/src/features/
 ├── archive/        список и фильтры архива
 ├── week-review/    закрытие недели, carry-over
 ├── settings/       general, columns, notifications, status flow editor
-├── analytics/      charts (ECharts), filters, export dialog
+├── analytics/      charts (ECharts), filters, export dialog + preview
 ├── imports/        parse-import helpers
 └── jobs/           форматирование статусов job (в general settings)
 ```
@@ -740,10 +746,13 @@ GET    /api/v1/analytics/cycle-time/
 GET    /api/v1/analytics/notifications/
 GET    /api/v1/analytics/task-flow/
 GET    /api/v1/analytics/archive/
+GET    /api/v1/analytics/exports/preview/
 GET|POST /api/v1/analytics/exports/
 GET    /api/v1/analytics/exports/<pk>/
 GET    /api/v1/analytics/exports/<pk>/download/
 ```
+
+**Экспорт:** `POST /analytics/exports/` принимает `export_type`, `file_format` (`csv` | `xlsx` | `pdf`), опциональный `filters` (`week`, `from`, `to`, `tags`, `source`). Preview использует те же query-параметры плюс `export_type` и опциональный `locale`.
 
 ---
 
@@ -901,7 +910,7 @@ npm run typecheck
 npm run build
 ```
 
-17 spec-файлов, 124 теста (lib, features/settings, board labels, …).
+17 spec-файлов, 132 теста (lib, features/settings, board labels, …).
 
 ### Lint
 
@@ -910,6 +919,18 @@ make lint           # pre-commit all files
 make lint-install   # git hooks
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy .
 ```
+
+### OpenAPI snapshot
+
+Снимок схемы для ревью и diff в CI:
+
+```bash
+cd backend
+DJANGO_SETTINGS_MODULE=cadence.settings.test uv run python manage.py spectacular \
+  --file ../docs/openapi.json --format openapi-json
+```
+
+Живая документация: `/api/docs/`. Для export-эндпоинтов описаны request/response через `drf-spectacular`.
 
 ### CI (`.github/workflows/ci.yml`)
 
@@ -973,4 +994,4 @@ make up
 
 ---
 
-*Документ актуален для Cadence v1.0.0. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*
+*Документ актуален для Cadence v1.1.0. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*

@@ -153,14 +153,22 @@ def create_task_via_api(
     week: str | None = None,
     tags: list[str] | None = None,
     description: str | None = None,
+    task_type: str = "task",
+    links: list[dict] | None = None,
 ):
-    payload: dict = {"title": title, "column_id": column_id}
+    payload: dict = {
+        "title": title,
+        "column_id": column_id,
+        "task_type": task_type,
+    }
     if week is not None:
         payload["week"] = week
     if tags is not None:
         payload["tags"] = tags
     if description is not None:
         payload["description"] = description
+    if links is not None:
+        payload["links"] = links
     return client.post(
         reverse("task-list"),
         payload,
@@ -171,7 +179,6 @@ def create_task_via_api(
 def close_task_via_api(client, task_id: int, **extra):
     payload = {
         "completion_note": "Done",
-        "evidence_url": "https://example.com",
         **extra,
     }
     return client.post(

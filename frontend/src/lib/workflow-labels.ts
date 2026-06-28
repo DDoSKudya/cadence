@@ -42,7 +42,6 @@ const COLUMN_NAME_TO_SYSTEM_TYPE: Record<string, string> = {
 const TASK_FIELD_KEYS: Record<string, string> = {
   title: "common.title",
   description: "common.description",
-  evidence_url: "board.evidenceUrl",
   due_at: "board.dueDate",
 };
 
@@ -63,6 +62,13 @@ export function translateStatusLabel(
     return translateByKey(`workflow.status.${slug}`, slugOrName ?? slug);
   }
   return slugOrName?.trim() || "";
+}
+
+export function statusDisplayName(status: {
+  name: string;
+  slug?: string | null;
+}): string {
+  return translateStatusLabel(status.name, status.slug);
 }
 
 export function translateColumnLabel(

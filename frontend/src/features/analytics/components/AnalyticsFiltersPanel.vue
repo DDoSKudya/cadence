@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { XMarkIcon } from "@heroicons/vue/24/outline";
 
+import { sourceLabel } from "@/features/analytics/labels";
 import type { AnalyticsFilters } from "@/features/analytics/types";
 import type { Tag } from "@/features/board/types";
+
+const SOURCE_OPTIONS = ["ui", "api", "json_import", "telegram"] as const;
 
 const open = defineModel<boolean>("open", { default: false });
 const draftFilters = defineModel<AnalyticsFilters>("draftFilters", { required: true });
@@ -83,10 +86,9 @@ function clear() {
                 <span class="form-label">{{ $t("common.source") }}</span>
                 <select v-model="draftFilters.source" class="field px-3 py-2">
                   <option value="">{{ $t("common.all") }}</option>
-                  <option value="ui">UI</option>
-                  <option value="api">API</option>
-                  <option value="json_import">JSON import</option>
-                  <option value="telegram">Telegram</option>
+                  <option v-for="source in SOURCE_OPTIONS" :key="source" :value="source">
+                    {{ sourceLabel(source) }}
+                  </option>
                 </select>
               </label>
             </form>

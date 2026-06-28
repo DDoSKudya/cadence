@@ -89,19 +89,36 @@
   flex: 1;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.625rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.55) transparent;
+}
+
+.board-column-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.board-column-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(148 163 184 / 0.45);
+}
+
+.board-column-body::-webkit-scrollbar-thumb:hover {
+  background: rgb(100 116 139 / 0.55);
 }
 
 .board-column-list {
   display: flex;
-  min-height: 2rem;
-  flex: 1;
+  flex: none;
   flex-direction: column;
   gap: 0.625rem;
 }
 
 .task-card {
   position: relative;
+  flex-shrink: 0;
   cursor: pointer;
   overflow: hidden;
   border: 1px solid rgb(208 214 224 / 0.85);
@@ -153,6 +170,29 @@
   color: var(--color-text);
 }
 
+.task-card-description {
+  display: -webkit-box;
+  margin-top: 0.375rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.task-card-story-points {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
 .task-card-ghost {
   opacity: 0.4;
 }
@@ -202,16 +242,42 @@
   color: var(--color-muted);
 }
 
+.badge-task-type {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-task-type-epic {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.badge-task-type-story {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.badge-task-type-task {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.badge-task-type-bug {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
 .tag-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   border-radius: 999px;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-muted);
+  border: 1px solid var(--tag-chip-border, var(--color-border-subtle));
+  background: var(--tag-chip-bg, var(--color-surface-muted));
   padding: 0.125rem 0.5rem;
   font-size: 0.6875rem;
-  color: var(--color-text-secondary);
+  color: var(--tag-chip-text, var(--color-text-secondary));
 }
 
 .week-nav {

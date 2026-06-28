@@ -43,3 +43,12 @@ export function statusNodeKey(status: Pick<TaskStatusNode, "id" | "client_key">)
   }
   return status.client_key ?? "";
 }
+
+export function isTerminalStatus(
+  status: Pick<TaskStatusNode, "is_terminal" | "slug"> | null | undefined,
+): boolean {
+  if (!status) {
+    return false;
+  }
+  return status.is_terminal || status.slug === "cancel";
+}

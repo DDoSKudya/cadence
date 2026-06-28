@@ -9,10 +9,15 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 
+from apps.boards.column_resolution import resolve_terminal_column
 from apps.boards.models import Board, BoardColumn, SystemType, TaskStatus
 from apps.boards.services import ColumnSettingsService, ColumnWorkflowService
 from apps.boards.task_status_services import TaskStatusService
 from apps.core.tag_services import TagService
+from apps.notifications.eligibility import (
+    suppress_task_notifications,
+    task_accepts_notifications,
+)
 from apps.notifications.scheduling import schedule_next_reminder
 from apps.tasks.events import (
     EventActor,
@@ -20,7 +25,8 @@ from apps.tasks.events import (
     record_task_event,
     resolve_request_context,
 )
-from apps.tasks.models import Task, TaskEvent, TaskEventType
+from apps.tasks.models import Task, TaskEvent, TaskEventType, TaskType
+from apps.tasks.task_link_services import TaskLinkInput, TaskLinkService
 from apps.weeks.models import Week
 from apps.weeks.services import WeekService
 
@@ -33,8 +39,11 @@ class TaskCreateData(TypedDict):
     priority: NotRequired[str]
     tags: NotRequired[list[str]]
     due_at: NotRequired[datetime | None]
-    evidence_url: NotRequired[str]
     reminder_enabled: NotRequired[bool]
+    story_points: NotRequired[int | None]
+    external_ref: NotRequired[str]
+    task_type: NotRequired[str]
+    links: NotRequired[list[dict[str, object]]]
 
 
 @dataclass(frozen=True)
@@ -48,11 +57,14 @@ class TaskCreateInput:
     priority: str = "normal"
     tag_slugs: list[str] | None = None
     due_at: datetime | None = None
-    evidence_url: str = ""
     reminder_enabled: bool = True
     reminder_interval_minutes: int | None = None
     created_by: User | None = None
     external_ref: str = ""
+    evidence_url: str = ""
+    story_points: int | None = None
+    task_type: str = TaskType.TASK
+    links: list[TaskLinkInput] | None = None
 
 
 @dataclass(frozen=True)
@@ -66,13 +78,18 @@ class TaskUpdateInput:
     clear_week: bool = False
     due_at: datetime | None = None
     clear_due_at: bool = False
-    evidence_url: str | None = None
     reminder_enabled: bool | None = None
     reminder_interval_minutes: int | None = None
     clear_reminder_interval: bool = False
     tag_slugs: list[str] | None = None
     task_status_id: int | None = None
     task_status_provided: bool = False
+    story_points: int | None = None
+    clear_story_points: bool = False
+    external_ref: str | None = None
+    task_type: str | None = None
+    links: list[TaskLinkInput] | None = None
+    links_provided: bool = False
 
 
 class TaskCreationService:
@@ -106,14 +123,19 @@ class TaskCreationService:
             column_entered_at=now,
             due_at=data.due_at,
             source=data.actor.source,
-            evidence_url=data.evidence_url,
             reminder_enabled=data.reminder_enabled,
             reminder_interval_minutes=data.reminder_interval_minutes,
             created_by=data.created_by,
             external_ref=data.external_ref,
+            evidence_url=data.evidence_url,
+            story_points=data.story_points,
+            task_type=data.task_type,
         )
-        schedule_next_reminder(task)
+        if task_accepts_notifications(task):
+            schedule_next_reminder(task)
         TaskCreationService._set_tags(task, data.tag_slugs or [])
+        if data.links is not None:
+            TaskLinkService.sync_outgoing_links(task, data.links)
         record_task_event(
             task,
             TaskEventType.CREATED,
@@ -167,6 +189,9 @@ class TaskUpdateService:
         if data.tag_slugs is not None:
             TaskCreationService._set_tags(task, data.tag_slugs)
 
+        if data.links_provided and data.links is not None:
+            TaskLinkService.sync_outgoing_links(task, data.links)
+
         status_changed = False
         if data.task_status_provided:
             actor = resolve_request_context(data.request)
@@ -209,6 +234,9 @@ class TaskUpdateService:
         if data.priority is not None:
             task.priority = data.priority
             fields.append("priority")
+        if data.task_type is not None:
+            task.task_type = data.task_type
+            fields.append("task_type")
         if data.clear_week:
             task.week = None
             fields.append("week")
@@ -221,9 +249,15 @@ class TaskUpdateService:
         elif data.due_at is not None:
             task.due_at = data.due_at
             fields.append("due_at")
-        if data.evidence_url is not None:
-            task.evidence_url = data.evidence_url
-            fields.append("evidence_url")
+        if data.clear_story_points:
+            task.story_points = None
+            fields.append("story_points")
+        elif data.story_points is not None:
+            task.story_points = data.story_points
+            fields.append("story_points")
+        if data.external_ref is not None:
+            task.external_ref = data.external_ref
+            fields.append("external_ref")
 
     @staticmethod
     def _apply_schedule_fields(
@@ -335,6 +369,8 @@ class TaskStatusChangeService:
                 "to_task_status_id": task.task_status_id,
             },
         )
+        if not task_accepts_notifications(task):
+            suppress_task_notifications(task)
         return task
 
 
@@ -528,13 +564,11 @@ class TaskCloseService:
         task: Task,
         *,
         completion_note: str = "",
-        evidence_url: str | None = None,
         request: Request,
     ) -> Task:
         return TaskCloseService.close_with_actor(
             task,
             completion_note=completion_note,
-            evidence_url=evidence_url,
             actor=resolve_request_context(request),
         )
 
@@ -544,24 +578,19 @@ class TaskCloseService:
         task: Task,
         *,
         completion_note: str = "",
-        evidence_url: str | None = None,
         actor: EventActor,
     ) -> Task:
         if task.archived_at is not None:
             raise ValidationError("Task is already closed.")
 
-        done_column = BoardColumn.objects.filter(
-            board=task.board,
-            system_type=SystemType.DONE,
-            is_active=True,
-        ).first()
+        terminal_column = resolve_terminal_column(task.board)
 
         from_column_id = task.column_id
-        if done_column is not None and task.column_id != done_column.id:
+        if terminal_column is not None and task.column_id != terminal_column.id:
             TaskMoveService.move_with_actor(
                 task,
-                target_column=done_column,
-                target_position=TaskCreationService._next_position(done_column),
+                target_column=terminal_column,
+                target_position=TaskCreationService._next_position(terminal_column),
                 actor=actor,
             )
 
@@ -569,13 +598,11 @@ class TaskCloseService:
         task.completion_note = completion_note
         task.closed_at = now
         task.archived_at = now
-        update_fields = ["completion_note", "closed_at", "archived_at", "updated_at"]
-        if evidence_url is not None:
-            task.evidence_url = evidence_url
-            update_fields.append("evidence_url")
-        task.save(update_fields=update_fields)
+        task.save(
+            update_fields=["completion_note", "closed_at", "archived_at", "updated_at"],
+        )
 
-        TaskCloseService._cancel_pending_notifications(task.id)
+        suppress_task_notifications(task)
         record_task_event(
             task,
             TaskEventType.CLOSED,
@@ -583,21 +610,6 @@ class TaskCloseService:
             payload={"from_column_id": from_column_id},
         )
         return task
-
-    @staticmethod
-    def _cancel_pending_notifications(task_id: int) -> None:
-        from django.apps import apps as django_apps
-
-        if not django_apps.is_installed("apps.notifications"):
-            return
-
-        notification_job = django_apps.get_model("notifications", "NotificationJob")
-        from apps.notifications.models import NotificationStatus
-
-        notification_job.objects.filter(
-            task_id=task_id,
-            status=NotificationStatus.PENDING,
-        ).update(status=NotificationStatus.CANCELLED)
 
 
 class TaskReopenService:
@@ -608,21 +620,35 @@ class TaskReopenService:
             raise ValidationError("Task is not archived.")
 
         target_column = TaskReopenService._resolve_target_column(task)
+        target_status = TaskStatusService.resolve_column_status(target_column)
+        source_column_id = task.column_id
+
         task.closed_at = None
         task.archived_at = None
-        task.save(update_fields=["closed_at", "archived_at", "updated_at"])
+        task.column = target_column
+        task.column_entered_at = timezone.now()
+        task.position = TaskCreationService._next_position(target_column)
+        update_fields = [
+            "closed_at",
+            "archived_at",
+            "column",
+            "column_entered_at",
+            "position",
+            "updated_at",
+        ]
+        if target_status is not None:
+            task.task_status = target_status
+            update_fields.append("task_status")
+        task.save(update_fields=update_fields)
 
-        TaskMoveService.move(
-            task,
-            target_column=target_column,
-            target_position=TaskCreationService._next_position(target_column),
-            request=request,
-        )
         record_request_event(
             task,
             TaskEventType.REOPENED,
             request,
-            payload={"to_column_id": target_column.id},
+            payload={
+                "from_column_id": source_column_id,
+                "to_column_id": target_column.id,
+            },
         )
         return task
 
@@ -709,9 +735,33 @@ def create_task_from_request(request: Request, data: TaskCreateData) -> Task:
         priority=data.get("priority", "normal"),
         tag_slugs=data.get("tags"),
         due_at=data.get("due_at"),
-        evidence_url=data.get("evidence_url", ""),
         reminder_enabled=data.get("reminder_enabled", True),
+        story_points=data.get("story_points"),
+        external_ref=data.get("external_ref", ""),
+        task_type=data.get("task_type", TaskType.TASK),
+        links=parse_task_link_inputs(data.get("links")),
         actor=actor,
         created_by=created_by,
     )
     return TaskCreationService.create(create_input)
+
+
+def parse_task_link_inputs(raw_links: object | None) -> list[TaskLinkInput]:
+    if not isinstance(raw_links, list):
+        return []
+
+    parsed: list[TaskLinkInput] = []
+    for item in raw_links:
+        if not isinstance(item, dict):
+            continue
+        target_task_id = item.get("target_task_id")
+        link_type = item.get("link_type", "relates")
+        if target_task_id is None:
+            continue
+        parsed.append(
+            TaskLinkInput(
+                target_task_id=int(target_task_id),
+                link_type=str(link_type),
+            ),
+        )
+    return parsed

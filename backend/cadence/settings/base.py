@@ -100,8 +100,11 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cadence API",
-    "VERSION": "1.0.0",
-    "DESCRIPTION": "Personal weekly Kanban API for Cadence.",
+    "VERSION": "1.1.0",
+    "DESCRIPTION": (
+        "Personal weekly Kanban API for Cadence: board, tasks, imports, "
+        "notifications, archive, and analytics with CSV/XLSX/PDF export jobs."
+    ),
 }
 
 LOG_LEVEL = env("LOG_LEVEL")

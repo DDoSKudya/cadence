@@ -4,6 +4,7 @@ import { ChevronDownIcon, XMarkIcon } from "@heroicons/vue/24/outline";
 
 import type { TaskStatusNode } from "@/features/settings/task-status-graph";
 import { columnDotStyle } from "@/lib/column-color";
+import { statusDisplayName } from "@/lib/workflow-labels";
 
 const props = defineProps<{
   modelValue: number[];
@@ -121,7 +122,7 @@ onUnmounted(() => {
             class="status-multi-select-chip"
           >
             <span class="status-multi-select-chip-dot" :style="columnDotStyle(status.color)" />
-            <span class="status-multi-select-chip-label">{{ status.name }}</span>
+            <span class="status-multi-select-chip-label">{{ statusDisplayName(status) }}</span>
             <button
               v-if="!readOnly"
               class="status-multi-select-chip-remove"
@@ -148,7 +149,7 @@ onUnmounted(() => {
             @click="status.id !== null && addStatus(status.id)"
           >
             <span class="status-multi-select-chip-dot" :style="columnDotStyle(status.color)" />
-            <span>{{ status.name }}</span>
+            <span>{{ statusDisplayName(status) }}</span>
           </button>
         </li>
       </ul>

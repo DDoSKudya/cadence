@@ -39,6 +39,11 @@ import {
 } from "@/features/analytics/api";
 import AnalyticsFiltersPanel from "@/features/analytics/components/AnalyticsFiltersPanel.vue";
 import ExportDialog from "@/features/analytics/components/ExportDialog.vue";
+import {
+  columnBreakdownLabel,
+  sourceLabel,
+  telegramActionLabel,
+} from "@/features/analytics/labels";
 import { CHART_COLORS } from "@/features/analytics/register-echarts";
 import type {
   AnalyticsFilters,
@@ -46,6 +51,7 @@ import type {
   ArchiveAnalytics,
   BreakdownItem,
   CycleTimeData,
+  ExportSnapshot,
   NotificationMetrics,
   TaskFlowData,
   WeeklyTrendItem,
@@ -87,6 +93,16 @@ const notifications = ref<NotificationMetrics | null>(null);
 const taskFlow = ref<TaskFlowData | null>(null);
 const archiveStats = ref<ArchiveAnalytics | null>(null);
 
+const exportSnapshot = computed<ExportSnapshot>(() => ({
+  schemeName: summary.value?.scheme?.name,
+  summary: summary.value,
+  weeklyTrend: trendItems.value,
+  columnBreakdown: columnBreakdown.value,
+  tagBreakdown: tagBreakdown.value,
+  notifications: notifications.value,
+  archiveStats: archiveStats.value,
+}));
+
 const filtersActive = computed(
   () =>
     Boolean(appliedFilters.value.week?.trim()) ||
@@ -108,6 +124,9 @@ const headerMeta = computed(() => {
     t("analytics.createdMeta", { count: summary.value.tasks_created }),
     t("analytics.closedMeta", { count: summary.value.tasks_closed }),
   ];
+  if (summary.value.scheme?.name) {
+    parts.push(summary.value.scheme.name);
+  }
   if (filtersActive.value) {
     parts.push(t("analytics.filtersApplied"));
   }
@@ -183,7 +202,13 @@ const trendChartOption = computed<EChartsOption>(() =>
 );
 
 const columnChartOption = computed<EChartsOption>(() =>
-  breakdownChartOption(columnBreakdown.value, CHART_COLORS.indigo),
+  breakdownChartOption(
+    columnBreakdown.value.map((item) => ({
+      ...item,
+      key: columnBreakdownLabel(item),
+    })),
+    CHART_COLORS.indigo,
+  ),
 );
 
 const tagChartOption = computed<EChartsOption>(() =>
@@ -219,11 +244,10 @@ const telegramChartOption = computed<EChartsOption>(() => {
   if (!notifications.value) {
     return {};
   }
-  return telegramActionsOption(
-    notifications.value.telegram_done_actions,
-    notifications.value.telegram_in_progress_actions,
-  );
+  return telegramActionsOption(notifications.value.telegram_actions ?? []);
 });
+
+const telegramActionCards = computed(() => notifications.value?.telegram_actions ?? []);
 
 const archiveWeekChartOption = computed<EChartsOption>(() => {
   const items = archiveStats.value?.closed_by_week ?? [];
@@ -253,17 +277,6 @@ const archiveCoverageChartOption = computed<EChartsOption>(() => {
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
-}
-
-const SOURCE_LABELS: Record<string, string> = {
-  ui: "UI",
-  api: "API",
-  json_import: "JSON import",
-  telegram: "Telegram",
-};
-
-function sourceLabel(value: string): string {
-  return SOURCE_LABELS[value] ?? value;
 }
 
 function weekDisplay(value: string): string {
@@ -635,15 +648,15 @@ onUnmounted(() => {
                 <span class="analytics-notify-value">{{ notifications.notification_failures }}</span>
                 <span class="analytics-notify-label">{{ $t("analytics.failures") }}</span>
               </article>
-              <article class="analytics-notify-card">
-                <span class="analytics-notify-value">{{ notifications.telegram_done_actions }}</span>
-                <span class="analytics-notify-label">{{ $t("analytics.doneInTelegram") }}</span>
-              </article>
-              <article class="analytics-notify-card">
-                <span class="analytics-notify-value">
-                  {{ notifications.telegram_in_progress_actions }}
+              <article
+                v-for="action in telegramActionCards"
+                :key="action.slug"
+                class="analytics-notify-card"
+              >
+                <span class="analytics-notify-value">{{ action.count }}</span>
+                <span class="analytics-notify-label">
+                  {{ telegramActionLabel(action.slug) }}
                 </span>
-                <span class="analytics-notify-label">{{ $t("analytics.inProgress") }}</span>
               </article>
               <article class="analytics-notify-card analytics-notify-accent">
                 <span class="analytics-notify-value">
@@ -667,10 +680,7 @@ onUnmounted(() => {
                   <h2>{{ $t("analytics.telegramActions") }}</h2>
                 </header>
                 <AnalyticsChart
-                  v-if="
-                    notifications.telegram_done_actions > 0 ||
-                    notifications.telegram_in_progress_actions > 0
-                  "
+                  v-if="telegramActionCards.length > 0"
                   :option="telegramChartOption"
                   size="donut"
                 />
@@ -690,6 +700,10 @@ onUnmounted(() => {
       @apply="applyFilters"
       @clear="clearFilters"
     />
-    <ExportDialog v-model:open="exportOpen" :filters="appliedFilters" />
+    <ExportDialog
+      v-model:open="exportOpen"
+      :filters="appliedFilters"
+      :snapshot="exportSnapshot"
+    />
   </div>
 </template>

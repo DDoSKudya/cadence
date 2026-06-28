@@ -7,7 +7,7 @@
     <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
   </p>
   <p>
-    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-111827?style=flat-square"></a>
+    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.0-111827?style=flat-square"></a>
     <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
     <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
     <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
@@ -223,7 +223,7 @@ CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и p
 | **Workflow** | схемы досок, граф статусов, правила переходов колонок    |
 | **Ввод**     | UI, REST API (API key), JSON inbox, Telegram callbacks   |
 | **Фон**      | Celery jobs с retry/cancel, Flower, service logs         |
-| **Обзор**    | архив, week review, аналитика, экспорт CSV/XLSX          |
+| **Обзор**    | архив, week review, аналитика, экспорт CSV/XLSX/PDF      |
 | **i18n**     | интерфейс RU / EN                                        |
 
 Подробные потоки данных — в [docs/DEVELOPERS.md §6](docs/DEVELOPERS.md#6-потоки-данных).
@@ -327,7 +327,8 @@ nginx маршрутизирует `/` во frontend, `/api/` и `/admin/` в ba
 | `POST`      | `/api/v1/imports/upload/`    | загрузка JSON     |
 | `GET`       | `/api/v1/jobs/`              | фоновые задания   |
 | `GET`       | `/api/v1/analytics/summary/` | сводка аналитики  |
-| `GET\|POST` | `/api/v1/analytics/exports/` | экспорт CSV/XLSX  |
+| `GET\|POST` | `/api/v1/analytics/exports/` | экспорт CSV/XLSX/PDF (фоновые job) |
+| `GET`       | `/api/v1/analytics/exports/preview/` | предпросмотр макета экспорта |
 
 Документация: [`/api/docs/`](http://localhost:8080/api/docs/) · снимок схемы: [`docs/openapi.json`](docs/openapi.json).
 
@@ -365,7 +366,7 @@ curl -X POST http://localhost:8080/api/v1/tasks/ \
 | `postgres_data` (volume)          | задачи, доски, недели, jobs, notifications |
 | `data/task-inbox/pending/`        | входящие JSON для импорта                  |
 | `data/task-inbox/processed/`      | успешно обработанные файлы                 |
-| `media/exports/`                  | сгенерированные CSV/XLSX                   |
+| `media/exports/`                  | сгенерированные CSV/XLSX/PDF               |
 | `logs/api.log`, `logs/worker.log` | service logs (`CADENCE_LOG_DIR`)           |
 
 В UI: **Настройки → Общие → Service logs**. В dev доступен Flower на `:5556`.
@@ -381,7 +382,7 @@ make test
 | Слой     | Инструмент         | Покрытие                                             |
 | -------- | ------------------ | ---------------------------------------------------- |
 | Backend  | pytest, ruff, mypy | ≥85% coverage (`apps/`), EC-тесты в `backend/tests/` |
-| Frontend | vue-tsc, Vitest    | 17 spec-файлов, `npm run build`                      |
+| Frontend | vue-tsc, Vitest    | 19 spec-файлов, `npm run build`                      |
 
 Отдельно:
 
@@ -423,6 +424,6 @@ make up
 
 <div align="center">
 
-<sub>Cadence · v1.0.0 · Django · Vue · Celery · MIT</sub>
+<sub>Cadence · v1.1.0 · Django · Vue · Celery · MIT</sub>
 
 </div>

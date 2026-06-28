@@ -1,8 +1,32 @@
 # Changelog
 
+## 1.1.0 — 2026-06-28
+
+Analytics export refresh: styled reports, live preview, and PDF.
+
+### Features
+
+- Analytics export preview API (`GET /api/v1/analytics/exports/preview/`) — tabular layout aligned with XLSX/PDF output
+- PDF export format (WeasyPrint + matplotlib charts) alongside CSV and styled XLSX
+- Structured export filenames: report type, period, filters, generation timestamp (ASCII stem)
+- Export dialog UI: large modal with sheet tabs and in-browser preview before download
+
+### Improvements
+
+- XLSX exports: multi-sheet layout, charts, localized headers and footnotes
+- EC test suite reorganized into `test_ec_*` modules; backend coverage gate unchanged (≥85%)
+- Request ID in structured log format; Celery task lifecycle logging
+- OpenAPI snapshot updated; export endpoints documented with request/response schemas
+
+### Infrastructure
+
+- Production nginx image (`infra/nginx/Dockerfile`) and `prod.conf` for baked SPA
+- Backend Docker image: Cairo/Pango libs for PDF generation
+- Dependencies: `weasyprint`, `matplotlib`
+
 ## 1.0.0 — 2026-06-22
 
-First production-ready release (MVP stages 0–10).
+First production-ready release.
 
 ### Features
 

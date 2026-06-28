@@ -91,7 +91,7 @@ def test_notifications_ec_dispatch_send_uses_mocked_deliver(
         ),
         pytest.param(
             CallbackAction.TASK_IN_PROGRESS,
-            "in_progress",
+            "status_updated",
             id="ec_callback_in_progress_moves_or_reschedules",
         ),
         pytest.param(
@@ -265,3 +265,40 @@ def test_notifications_ec_list_filters_by_task_id(
     assert len(payload) >= 1
     assert all(item["task_id"] == stale_task.id for item in payload)
     assert notification.id in {item["id"] for item in payload}
+
+
+@pytest.mark.django_db
+def test_notifications_ec_skips_done_and_cancel_statuses(
+    telegram_enabled, api_client, planned_column, ready_column
+):
+    from apps.boards.models import TaskStatus
+
+    for slug in ("done", "cancel"):
+        created = create_task_via_api(
+            api_client,
+            title=f"Terminal {slug}",
+            column_id=planned_column.id,
+        )
+        task = Task.objects.get(pk=created.json()["id"])
+        status = TaskStatus.objects.get(board=task.board, slug=slug)
+        task.task_status = status
+        task.column = ready_column
+        task.reminder_enabled = True
+        task.next_reminder_at = timezone.now() - timedelta(minutes=5)
+        task.save(
+            update_fields=[
+                "task_status",
+                "column",
+                "reminder_enabled",
+                "next_reminder_at",
+                "updated_at",
+            ],
+        )
+
+    with patch(
+        "apps.notifications.tasks.send_telegram_notification.delay",
+    ) as mocked_delay:
+        result = ReminderPlanningService.scan()
+
+    assert result["planned"] == 0
+    assert mocked_delay.call_count == 0

@@ -3,13 +3,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import {
   ArchiveBoxIcon,
-  ArrowTopRightOnSquareIcon,
   CalendarDaysIcon,
   CheckBadgeIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FunnelIcon,
-  LinkIcon,
   MagnifyingGlassIcon,
   TagIcon,
 } from "@heroicons/vue/24/outline";
@@ -433,29 +431,13 @@ onUnmounted(() => {
                       </div>
 
                       <div
-                        v-if="selectedTask.completion_note || selectedTask.evidence_url"
+                        v-if="selectedTask.completion_note"
                         key="summary"
                         class="archive-info-grid archive-detail-block"
                       >
-                        <div v-if="selectedTask.completion_note" class="archive-info-card">
+                        <div class="archive-info-card">
                           <p class="archive-info-label">{{ $t("archive.outcome") }}</p>
                           <p class="archive-info-text">{{ selectedTask.completion_note }}</p>
-                        </div>
-
-                        <div v-if="selectedTask.evidence_url" class="archive-info-card">
-                          <p class="archive-info-label">
-                            <LinkIcon class="archive-inline-icon" />
-                            Evidence
-                          </p>
-                          <a
-                            class="archive-evidence-link"
-                            :href="selectedTask.evidence_url"
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            <span>{{ selectedTask.evidence_url }}</span>
-                            <ArrowTopRightOnSquareIcon class="icon-sm" />
-                          </a>
                         </div>
                       </div>
 

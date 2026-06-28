@@ -15,6 +15,7 @@ class ExportType(models.TextChoices):
 class FileFormat(models.TextChoices):
     CSV = "csv", "CSV"
     XLSX = "xlsx", "XLSX"
+    PDF = "pdf", "PDF"
 
 
 class ExportStatus(models.TextChoices):
