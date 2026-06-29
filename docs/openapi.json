@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "Cadence API",
-        "version": "1.1.0",
+        "version": "1.1.1",
         "description": "Personal weekly Kanban API for Cadence: board, tasks, imports, notifications, archive, and analytics with CSV/XLSX/PDF export jobs."
     },
     "paths": {

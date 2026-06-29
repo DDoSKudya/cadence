@@ -26,7 +26,7 @@
 
 ## 1. О проекте
 
-**Cadence** (v1.1.0) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
+**Cadence** (v1.1.1) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
 
 ### Целевой пользователь
 
@@ -307,6 +307,8 @@ apps/<domain>/
 
 **Источники (`TaskSource`):** `ui`, `api`, `json_import`, `telegram`, `system`
 
+**Доска:** `active_tasks_for_board()` возвращает все задачи с `archived_at IS NULL`. Поле `week` — метка планирования, а не фильтр видимости: открытые задачи прошлых ISO-недель остаются на Kanban после смены недели. Параметр `?week=` в `GET /api/v1/board/` задаёт контекст недели в payload (новые задачи, week review), но не скрывает незакрытые задачи.
+
 **Сервисы:**
 
 - `TaskCreationService` — create с initial status и column binding
@@ -555,8 +557,10 @@ flowchart TD
     BEAT --> WR --> CMP
     CMP -->|да| CLOSE --> UPD
     CMP -->|нет| skip["return 0"]
-    MANUAL --> carry["Перенос open tasks\nна следующую неделю"]
+    MANUAL --> carry["carry_over: опционально\nобновить week_id у open tasks"]
 ```
+
+**Видимость на доске:** открытые задачи не исчезают при смене ISO-недели. `carry_over` при `POST /weeks/:id/close/` только меняет `week_id` у выбранных задач (опционально); скрывает с доски только закрытие/архив (`archived_at`).
 
 **Close task:** `closed_at` + `archived_at`, move to done column (если есть), cancel pending notifications, `TaskEvent CLOSED`.
 
@@ -994,4 +998,4 @@ make up
 
 ---
 
-*Документ актуален для Cadence v1.1.0. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*
+*Документ актуален для Cadence v1.1.1. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*

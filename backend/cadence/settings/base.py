@@ -100,7 +100,7 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cadence API",
-    "VERSION": "1.1.0",
+    "VERSION": "1.1.1",
     "DESCRIPTION": (
         "Personal weekly Kanban API for Cadence: board, tasks, imports, "
         "notifications, archive, and analytics with CSV/XLSX/PDF export jobs."

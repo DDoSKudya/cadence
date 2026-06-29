@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.1 — 2026-06-28
+
+Patch release: board task visibility and UX fixes.
+
+### Fixes
+
+- Board shows all open tasks across ISO weeks; starting a new week no longer hides unfinished work from previous weeks
+- Board drag-and-drop animation regression restored (Sortable flip + store sync)
+- Story points input no longer blocks task creation when `<input type="number">` yields a numeric value
+
+### Chore
+
+- Ignore local `.refact/` and `.cursor/` tooling directories; remove Refact runtime from git tracking
+
 ## 1.1.0 — 2026-06-28
 
 Analytics export refresh: styled reports, live preview, and PDF.

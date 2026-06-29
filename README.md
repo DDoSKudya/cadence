@@ -7,7 +7,7 @@
     <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
   </p>
   <p>
-    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.0-111827?style=flat-square"></a>
+    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.1-111827?style=flat-square"></a>
     <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
     <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
     <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
@@ -219,7 +219,7 @@ CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и p
 
 | Область      | Что умеет                                                |
 | ------------ | -------------------------------------------------------- |
-| **Доска**    | Kanban, DnD, drawer задачи, теги, приоритеты, ISO-недели |
+| **Доска**    | Kanban, DnD, drawer задачи, теги, приоритеты, story points; открытые задачи остаются на доске при смене ISO-недели |
 | **Workflow** | схемы досок, граф статусов, правила переходов колонок    |
 | **Ввод**     | UI, REST API (API key), JSON inbox, Telegram callbacks   |
 | **Фон**      | Celery jobs с retry/cancel, Flower, service logs         |
@@ -424,6 +424,6 @@ make up
 
 <div align="center">
 
-<sub>Cadence · v1.1.0 · Django · Vue · Celery · MIT</sub>
+<sub>Cadence · v1.1.1 · Django · Vue · Celery · MIT</sub>
 
 </div>

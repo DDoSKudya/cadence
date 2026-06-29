@@ -14,10 +14,14 @@ def get_board_task(pk: int) -> Task:
     return get_object_or_404(Task, pk=pk, board=board)
 
 
-def active_tasks_for_board(board: Board, week: Week):
+def active_tasks_for_board(board: Board, _week: Week | None = None):
+    """Return all open board tasks.
+
+    ``_week`` is accepted for call-site compatibility (board context week in the
+    payload). Open tasks stay visible across ISO weeks; only archiving removes them.
+    """
     return (
         Task.objects.filter(board=board, archived_at__isnull=True)
-        .filter(Q(week=week) | Q(week__isnull=True))
         .select_related("week", "column", "task_status")
         .prefetch_related("tags")
         .annotate(
