@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.tasks.models import Task
+from apps.weeks.services import WeekService
 from conftest import close_task_via_api, create_task_via_api
 
 
@@ -268,6 +271,33 @@ def test_tasks_ec_archived_task_update_rejected(api_client, planned_column):
         content_type="application/json",
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+def test_tasks_ec_board_shows_open_tasks_from_previous_weeks(
+    api_client,
+    planned_column,
+):
+    current = WeekService.get_or_create_current_week()
+    previous_start = current.starts_on - timedelta(days=7)
+    previous_iso = previous_start.isocalendar()
+    previous_key = f"{previous_iso.year}-W{previous_iso.week:02d}"
+
+    create_task_via_api(
+        api_client,
+        title="Carry-over visible",
+        column_id=planned_column.id,
+        week=previous_key,
+    )
+
+    response = api_client.get(reverse("board"))
+    assert response.status_code == 200
+    titles = {
+        task["title"]
+        for column in response.json()["columns"]
+        for task in column["tasks"]
+    }
+    assert "Carry-over visible" in titles
 
 
 @pytest.mark.django_db
