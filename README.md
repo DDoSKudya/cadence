@@ -7,7 +7,7 @@
     <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
   </p>
   <p>
-    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.1-111827?style=flat-square"></a>
+    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.2.0-111827?style=flat-square"></a>
     <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
     <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
     <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
@@ -19,6 +19,8 @@
   <a href="#быстрый-старт">Быстрый старт</a>
   ·
   <a href="#архитектура">Архитектура</a>
+  ·
+  <a href="#launcher">Launcher</a>
   ·
   <a href="#api">API</a>
   ·
@@ -62,6 +64,7 @@
       <strong>Start</strong><br>
       <a href="#быстрый-старт">Быстрый старт</a><br>
       <a href="#запуск">Запуск</a><br>
+      <a href="#launcher">Launcher</a><br>
       <a href="#переменные-окружения">Переменные окружения</a><br>
       <a href="#качество-кода">Качество кода</a>
     </td>
@@ -125,7 +128,8 @@ mise run test  # ruff + mypy + pytest + vitest + build
   </tr>
 </table>
 
-Первый вход — создайте суперпользователя:
+По умолчанию после миграций создаётся суперпользователь `admin` / `admin`.
+Для своего аккаунта:
 
 ```bash
 docker compose exec backend uv run python manage.py createsuperuser
@@ -147,6 +151,37 @@ mise run down   # остановить все профили
 ```
 
 nginx слушает порт **8080**. Порт можно поменять через `NGINX_HTTP_PORT` в `.env`.
+
+Альтернатива CLI: desktop launcher (alpha) — см. раздел [Launcher](#launcher).
+
+## Launcher
+
+Вместо `mise run up` можно запустить Cadence через кроссплатформенный desktop launcher (alpha) в [`tools/launcher`](tools/launcher). Сейчас он управляет только production-like стеком (`docker compose --profile prod`).
+
+Что умеет launcher:
+
+- поднимать и останавливать prod-стек
+- показывать статус сервисов
+- открывать веб-интерфейс в браузере
+
+**Зависимости для launcher:**
+
+| Компонент | Зачем |
+| --- | --- |
+| [Docker](https://docs.docker.com/get-docker/) и Docker Compose v2 | запуск Cadence-стека |
+| [mise](https://mise.jdx.dev/) или Python 3.12+ | runtime launcher |
+| [uv](https://docs.astral.sh/uv/) | установка зависимостей launcher |
+| локальный clone репозитория Cadence | launcher ищет корень по `docker-compose.yml` |
+
+Запуск из исходников:
+
+```bash
+cd tools/launcher
+uv sync --extra dev
+uv run cadence-launcher
+```
+
+Launcher ищет корень репозитория автоматически. Если не найдёт, попросит выбрать папку вручную и запомнит выбор. Подробности — в [`tools/launcher/README.md`](tools/launcher/README.md) и [`docs/LAUNCHER_REFERENCE.md`](docs/LAUNCHER_REFERENCE.md).
 
 ### Локальная установка зависимостей
 
@@ -425,6 +460,6 @@ mise run up
 
 <div align="center">
 
-<sub>Cadence · v1.1.1 · Django · Vue · Celery · MIT</sub>
+<sub>Cadence · v1.2.0 · Django · Vue · Celery · MIT</sub>
 
 </div>

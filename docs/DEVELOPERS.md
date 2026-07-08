@@ -26,7 +26,7 @@
 
 ## 1. О проекте
 
-**Cadence** (v1.1.1) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
+**Cadence** (v1.2.0) — персональный недельный Kanban для обучения и pet-проектов. MVP покрывает полный цикл: от приёма задач до архива и аналитики.
 
 ### Целевой пользователь
 
@@ -845,6 +845,27 @@ mise tasks
 
 Базовый набор команд в проекте: `mise run dev`, `mise run up`, `mise run down`, `mise run lint`, `mise run test`.
 
+### Desktop launcher
+
+Кроссплатформенный desktop launcher (alpha, `0.9.1a1`) живёт в [`tools/launcher/`](../tools/launcher/). Это отдельный Python desktop tool, а не часть Django backend.
+
+Запуск из исходников:
+
+```bash
+cd tools/launcher
+uv sync --extra dev
+uv run cadence-launcher
+```
+
+Launcher:
+
+- сам ищет корень Cadence или предлагает выбрать его вручную
+- управляет production-like стеком через `docker compose --profile prod`
+- показывает service health
+- открывает UI в браузере
+
+Нужны Docker, Docker Compose v2, Python 3.12+, `uv` и локальный clone репозитория. Подробности — в [`tools/launcher/README.md`](../tools/launcher/README.md) и [`docs/LAUNCHER_REFERENCE.md`](LAUNCHER_REFERENCE.md).
+
 ### Локальная установка без Docker (опционально)
 
 ```bash
@@ -1015,4 +1036,4 @@ mise run up
 
 ---
 
-*Документ актуален для Cadence v1.1.1. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*
+*Документ актуален для Cadence v1.2.0. При расхождениях с кодом приоритет у исходников и `docs/openapi.json`.*

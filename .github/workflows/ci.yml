@@ -64,10 +64,27 @@ jobs:
         working-directory: frontend
         run: npm run typecheck && npm run test -- --run && npm run build
 
+  launcher:
+    name: Launcher
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jdx/mise-action@v4
+
+      - name: Install launcher dependencies
+        working-directory: tools/launcher
+        run: uv sync --frozen --extra dev
+
+      - name: Run launcher tests
+        working-directory: tools/launcher
+        run: uv run pytest
+
   compose:
     name: Docker Compose
     runs-on: ubuntu-latest
-    needs: [pre-commit, backend, frontend]
+    needs: [pre-commit, backend, frontend, launcher]
 
     steps:
       - uses: actions/checkout@v4

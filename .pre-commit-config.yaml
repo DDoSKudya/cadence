@@ -23,9 +23,9 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^backend/
+        files: ^(backend|tools/launcher)/
       - id: ruff-format
-        files: ^backend/
+        files: ^(backend|tools/launcher)/
 
   - repo: local
     hooks:
@@ -57,6 +57,14 @@ repos:
         entry: bash -c "cd backend && uv run pytest"
         language: system
         files: ^(backend/|tests/)
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: launcher-pytest
+        name: launcher pytest
+        entry: bash -c "cd tools/launcher && uv sync --frozen --extra dev --quiet && uv run pytest -q"
+        language: system
+        files: ^tools/launcher/
         pass_filenames: false
         stages: [pre-push]
 
