@@ -17,31 +17,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v5
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - uses: jdx/mise-action@v4
 
       - name: Install backend dependencies
         working-directory: backend
         run: uv sync --frozen --all-groups
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Install pre-commit
-        run: uv tool install pre-commit
-
       - name: Run pre-commit
-        run: uv tool run pre-commit run --all-files --show-diff-on-failure
+        run: mise run lint
 
   backend:
     name: Backend
@@ -50,37 +37,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: astral-sh/setup-uv@v5
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - uses: jdx/mise-action@v4
 
       - name: Install backend dependencies
         working-directory: backend
         run: uv sync --frozen --all-groups
 
-      - name: Lint
-        working-directory: backend
-        run: uv run ruff check .
-
-      - name: Format check
-        working-directory: backend
-        run: uv run ruff format --check .
-
-      - name: Type check
-        working-directory: backend
-        run: uv run mypy .
-
-      - name: Check migrations
-        working-directory: backend
-        env:
-          DJANGO_SETTINGS_MODULE: cadence.settings.test
-        run: uv run python manage.py makemigrations --check --dry-run
-
       - name: Test with coverage
         working-directory: backend
-        run: uv run pytest
+        run: uv run ruff check . && uv run ruff format --check . && uv run mypy . && DJANGO_SETTINGS_MODULE=cadence.settings.test uv run python manage.py makemigrations --check --dry-run && uv run pytest
 
   frontend:
     name: Frontend
@@ -89,27 +54,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - uses: jdx/mise-action@v4
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Type check
+      - name: Frontend verification
         working-directory: frontend
-        run: npm run typecheck
-
-      - name: Test
-        working-directory: frontend
-        run: npm run test -- --run
-
-      - name: Build
-        working-directory: frontend
-        run: npm run build
+        run: npm run typecheck && npm run test -- --run && npm run build
 
   compose:
     name: Docker Compose

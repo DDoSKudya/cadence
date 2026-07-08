@@ -109,7 +109,7 @@ PostgreSQL 17 · RabbitMQ 3.13 (management) · nginx 1.27 · Flower 2.0 (dev)
 
 ```mermaid
 flowchart LR
-    subgraph dev["Профиль dev (make dev)"]
+    subgraph dev["Профиль dev (mise run dev)"]
         ND["nginx-dev :8080"]
         FE["frontend\nVite :5173"]
         BE["backend\ngunicorn :8000"]
@@ -119,7 +119,7 @@ flowchart LR
         TB["telegram-bot\n(опционально)"]
     end
 
-    subgraph prod["Профиль prod (make up)"]
+    subgraph prod["Профиль prod (mise run up)"]
         NG["nginx :8080\nbaked SPA"]
         BE2["backend\n--workers 2"]
         CW2["celery-worker"]
@@ -228,7 +228,7 @@ cadence/
 ├── media/                       # exports, uploads
 ├── staticfiles/                 # collectstatic
 ├── docker-compose.yml
-├── Makefile
+├── .mise.toml
 ├── .env.example
 └── README.md
 ```
@@ -821,13 +821,29 @@ GET    /api/v1/analytics/exports/<pk>/download/
 
 | Модуль | Когда |
 |--------|-------|
-| `cadence.settings.dev` | `make dev` |
-| `cadence.settings.prod` | `make up` |
+| `cadence.settings.dev` | `mise run dev` |
+| `cadence.settings.prod` | `mise run up` |
 | `cadence.settings.test` | pytest (SQLite, MD5 passwords) |
 
 ---
 
 ## 12. Разработка
+
+### Локальная установка через mise
+
+```bash
+mise install
+```
+
+После этого доступны project tools и task-ы из `.mise.toml`.
+
+```bash
+mise trust
+mise install
+mise tasks
+```
+
+Базовый набор команд в проекте: `mise run dev`, `mise run up`, `mise run down`, `mise run lint`, `mise run test`.
 
 ### Локальная установка без Docker (опционально)
 
@@ -846,10 +862,10 @@ cd frontend && npm install && npm run dev
 
 ### Типичный цикл
 
-1. `make dev` — поднять стек
+1. `mise run dev` — поднять стек
 2. Правки в `backend/apps/` или `frontend/src/`
-3. `make test` — перед коммитом
-4. `make lint` — pre-commit
+3. `mise run test` — перед коммитом
+4. `mise run lint` — pre-commit
 
 ### Миграции
 
@@ -858,7 +874,7 @@ docker compose exec backend uv run python manage.py makemigrations
 docker compose exec backend uv run python manage.py migrate
 ```
 
-`make test` включает `makemigrations --check --dry-run` — незакоммиченные миграции ломают CI.
+`mise run test` включает `makemigrations --check --dry-run` — незакоммиченные миграции ломают CI.
 
 ### API key для скриптов
 
@@ -914,13 +930,14 @@ npm run typecheck
 npm run build
 ```
 
-17 spec-файлов, 132 теста (lib, features/settings, board labels, …).
+19 spec-файлов, 133 теста (lib, features/settings, board labels, …).
 
 ### Lint
 
 ```bash
-make lint           # pre-commit all files
-make lint-install   # git hooks
+mise run lint           # pre-commit all files
+uv tool run pre-commit install
+uv tool run pre-commit install --hook-type pre-push
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy .
 ```
 
@@ -940,9 +957,9 @@ DJANGO_SETTINGS_MODULE=cadence.settings.test uv run python manage.py spectacular
 
 На push/PR в `main` и `develop`:
 
-1. pre-commit
-2. Backend: ruff, mypy, migrations check, pytest
-3. Frontend: typecheck, vitest, build
+1. `mise run lint`
+2. `mise run test`
+3. при необходимости точечно: `cd backend && uv run pytest` или `cd frontend && npm run test -- --run`
 4. Docker compose config validation
 
 ---
@@ -956,10 +973,10 @@ DJANGO_DEBUG=false
 CSRF_TRUSTED_ORIGINS=https://your-domain.example
 DJANGO_ALLOWED_HOSTS=your-domain.example
 
-make up
+mise run up
 ```
 
-`make up` устанавливает:
+`mise run up` устанавливает:
 
 - `DJANGO_SETTINGS_MODULE=cadence.settings.prod`
 - `GUNICORN_EXTRA_ARGS=--workers 2`
@@ -994,7 +1011,7 @@ make up
 - Тяжёлые read-query — в `selectors.py`
 - API — DRF serializers + explicit permissions
 - Frontend — feature-based structure, Pinia для shared state
-- Коммиты — conventional, `make test` зелёный
+- Коммиты — conventional, `mise run test` зелёный
 
 ---
 

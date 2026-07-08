@@ -24,6 +24,7 @@ x-backend-common: &backend-common
     CADENCE_REPO_ROOT: /workspace
     UV_PROJECT_ENVIRONMENT: /opt/venv
     DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-cadence.settings.dev}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
     DATABASE_URL: ${DATABASE_URL:-postgres://cadence:cadence@postgres:5432/cadence}
     CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://cadence:cadence@rabbitmq:5672//}
     TASK_INBOX_PENDING_DIR: /workspace/data/task-inbox/pending

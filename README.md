@@ -88,8 +88,10 @@
 
 ```bash
 cp .env.example .env
-make dev     # Docker: SPA + API на :8080
-make test    # ruff + mypy + pytest + vitest + build
+mise trust
+mise install
+mise run dev   # Docker: SPA + API на :8080
+mise run test  # ruff + mypy + pytest + vitest + build
 ```
 
 <table>
@@ -111,11 +113,11 @@ make test    # ruff + mypy + pytest + vitest + build
   </tr>
   <tr>
     <td><strong>Flower</strong></td>
-    <td><a href="http://localhost:5556">http://localhost:5556</a> (только <code>make dev</code>)</td>
+    <td><a href="http://localhost:5556">http://localhost:5556</a> (только <code>mise run dev</code>)</td>
   </tr>
   <tr>
     <td><strong>Vite</strong></td>
-    <td><a href="http://localhost:5173">http://localhost:5173</a> (только <code>make dev</code>)</td>
+    <td><a href="http://localhost:5173">http://localhost:5173</a> (только <code>mise run dev</code>)</td>
   </tr>
   <tr>
     <td><strong>Admin</strong></td>
@@ -131,17 +133,17 @@ docker compose exec backend uv run python manage.py createsuperuser
 
 ## Запуск
 
-**Нужно:** Docker Compose, Node 22+ (для локального фронта), Python 3.12 + [uv](https://docs.astral.sh/uv/) (для локального бэкенда).
+**Нужно:** [mise](https://mise.jdx.dev/) и Docker Compose. `mise` сам подтянет Python 3.12, Node 22 и `uv` из конфигурации проекта.
 
-`make help` покажет все команды: `up`, `down`, `dev`, `test`, `lint`, `lint-install`.
+`mise tasks` покажет основные команды: `dev`, `up`, `down`, `lint`, `test`.
 
 ### Docker
 
 ```bash
 cp .env.example .env
-make dev    # разработка: foreground, логи в терминале
-make up     # production-like: baked SPA, gunicorn workers, detached
-make down   # остановить все профили
+mise run dev    # разработка: foreground, логи в терминале
+mise run up     # production-like: baked SPA, gunicorn workers, detached
+mise run down   # остановить все профили
 ```
 
 nginx слушает порт **8080**. Порт можно поменять через `NGINX_HTTP_PORT` в `.env`.
@@ -162,7 +164,7 @@ cd frontend && npm install && cd ..
 | Переменная                               | Зачем                                                                       |
 | ---------------------------------------- | --------------------------------------------------------------------------- |
 | `DJANGO_SECRET_KEY`                      | секрет Django; в production — сильное случайное значение                    |
-| `DJANGO_DEBUG`                           | `true` в dev, `false` в prod (`make up`)                                    |
+| `DJANGO_DEBUG`                           | `true` в dev, `false` в prod (`mise run up`)                                |
 | `DATABASE_URL`                           | PostgreSQL; по умолчанию `postgres://cadence:cadence@postgres:5432/cadence` |
 | `CELERY_BROKER_URL`                      | RabbitMQ для Celery                                                         |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ENABLED` | опциональный бот и напоминания                                              |
@@ -172,8 +174,7 @@ cd frontend && npm install && cd ..
 ### Качество кода
 
 ```bash
-make lint-install   # pre-commit + pre-push hooks
-make lint && make test
+mise run lint && mise run test
 ```
 
 CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и production build. Конфиг: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
@@ -376,7 +377,7 @@ curl -X POST http://localhost:8080/api/v1/tasks/ \
 ## Тесты
 
 ```bash
-make test
+mise run test
 ```
 
 | Слой     | Инструмент         | Покрытие                                             |
@@ -402,7 +403,7 @@ DJANGO_DEBUG=false
 CSRF_TRUSTED_ORIGINS=https://your-domain.example
 DJANGO_ALLOWED_HOSTS=your-domain.example
 
-make up
+mise run up
 ```
 
 Чеклист production — [docs/DEVELOPERS.md §14](docs/DEVELOPERS.md#14-production).

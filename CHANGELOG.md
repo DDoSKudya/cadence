@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Infrastructure
+
+- Replace local `make`-based developer workflow with cross-platform `mise` tasks and align CI/docs around `.mise.toml`
+
 ## 1.1.1 — 2026-06-28
 
 Patch release: board task visibility and UX fixes.
