@@ -59,6 +59,10 @@ AnalyticsExportPreviewResponseSerializer = inline_serializer(
                         ),
                     ),
                     "total": serializers.IntegerField(),
+                    "kpis": serializers.DictField(
+                        child=serializers.IntegerField(),
+                        required=False,
+                    ),
                 },
             ),
         ),

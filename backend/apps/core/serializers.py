@@ -91,8 +91,19 @@ class ProjectSettingsSerializer(serializers.ModelSerializer):
 
     def update(self, instance: ProjectSettings, validated_data):
         token = validated_data.pop("telegram_bot_token", None)
+        telegram_token_changed = False
         if token is not None and token.strip():
             instance.telegram_bot_token = token.strip()
+            telegram_token_changed = True
+
+        telegram_related_fields = {
+            "telegram_enabled",
+            "telegram_bot_username",
+            "telegram_recipients",
+        }
+        telegram_settings_changed = telegram_token_changed or any(
+            field in validated_data for field in telegram_related_fields
+        )
 
         reminder_interval_changed = (
             "default_reminder_interval_minutes" in validated_data
@@ -108,7 +119,7 @@ class ProjectSettingsSerializer(serializers.ModelSerializer):
         if reminder_interval_changed:
             refresh_default_reminder_schedules(instance)
 
-        if instance.telegram_enabled:
+        if instance.telegram_enabled and telegram_settings_changed:
             run_telegram_bot_check(instance)
 
         return instance

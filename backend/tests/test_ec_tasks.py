@@ -259,6 +259,33 @@ def test_tasks_ec_close_reopen_lifecycle_succeeds(api_client, planned_column):
 
 
 @pytest.mark.django_db
+def test_tasks_ec_terminal_column_resolution_prefers_done_over_last_position(
+    planned_column,
+):
+    from apps.boards.column_resolution import resolve_terminal_column
+    from apps.boards.models import BoardColumn, SystemType
+
+    done_column = BoardColumn.objects.create(
+        board=planned_column.board,
+        name="Done lane",
+        system_type=SystemType.DONE,
+        color="green",
+        position=10,
+    )
+    ready_column = BoardColumn.objects.get(
+        board=planned_column.board,
+        system_type=SystemType.READY,
+    )
+    if ready_column.position <= done_column.position:
+        ready_column.position = done_column.position + 10
+        ready_column.save(update_fields=["position", "updated_at"])
+
+    terminal_column = resolve_terminal_column(planned_column.board)
+    assert terminal_column is not None
+    assert terminal_column.id == done_column.id
+
+
+@pytest.mark.django_db
 def test_tasks_ec_archived_task_update_rejected(api_client, planned_column):
     created = create_task_via_api(
         api_client, title="Archived update", column_id=planned_column.id

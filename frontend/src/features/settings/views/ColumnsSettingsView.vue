@@ -13,6 +13,7 @@ import {
 
 import ColumnPanel from "@/features/settings/components/ColumnPanel.vue";
 import ColumnWorkflowMatrix from "@/features/settings/components/ColumnWorkflowMatrix.vue";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import SchemeCreatePanel from "@/features/settings/components/SchemeCreatePanel.vue";
 import SchemePicker from "@/features/settings/components/SchemePicker.vue";
 import TagsSettingsPanel from "@/features/settings/components/TagsSettingsPanel.vue";
@@ -30,6 +31,10 @@ import {
 import type { SchemeSwitchResult } from "@/features/settings/api";
 import { columnDisplayName } from "@/features/settings/scheme-display";
 import { DEFAULT_BOARD_LIMITS, type BoardLimits } from "@/features/settings/constants";
+import {
+  readAllowedQueryValue,
+  replaceSettingsQueryParam,
+} from "@/features/settings/query-state";
 import type { BoardScheme, SettingsColumn } from "@/features/settings/types";
 import type { TaskStatusGraph } from "@/features/settings/task-status-graph";
 import type { ColumnWorkflow } from "@/features/settings/workflow";
@@ -65,10 +70,7 @@ const switchingScheme = ref(false);
 const orderBeforeDrag = ref<number[]>([]);
 
 function parseTab(value: unknown): ColumnsTab {
-  if (typeof value === "string" && COLUMNS_TABS.includes(value as ColumnsTab)) {
-    return value as ColumnsTab;
-  }
-  return "columns";
+  return readAllowedQueryValue(value, COLUMNS_TABS) ?? "columns";
 }
 
 const activeTab = ref<ColumnsTab>(parseTab(route.query.tab));
@@ -113,7 +115,7 @@ watch(activeTab, (tab) => {
   if (parseTab(route.query.tab) === tab) {
     return;
   }
-  const query = { ...route.query, tab };
+  const query = replaceSettingsQueryParam(route.query, "tab", tab);
   void router.replace({ name: "settings-columns", query });
 });
 
@@ -693,53 +695,16 @@ onMounted(loadColumns);
     </div>
 
     <Teleport to="body">
-      <Transition name="modal-fade">
-        <div
-          v-if="confirmOpen"
-          class="modal-backdrop"
-          role="presentation"
-          @click.self="closeConfirmDialog"
-        >
-          <section
-            class="modal-panel confirm-dialog-panel"
-            role="alertdialog"
-            aria-modal="true"
-            :aria-labelledby="confirmTitle ? 'columns-confirm-title' : undefined"
-            :aria-describedby="confirmMessage ? 'columns-confirm-message' : undefined"
-            @click.stop
-          >
-            <header class="modal-header">
-              <h2 id="columns-confirm-title" class="modal-title">{{ confirmTitle }}</h2>
-            </header>
-
-            <div class="modal-body">
-              <p id="columns-confirm-message" class="confirm-dialog-message">
-                {{ confirmMessage }}
-              </p>
-            </div>
-
-            <footer class="modal-footer">
-              <button
-                class="btn-ghost px-4 py-2 text-sm"
-                type="button"
-                :disabled="confirmLoading"
-                @click="closeConfirmDialog"
-              >
-                {{ $t("common.cancel") }}
-              </button>
-              <button
-                class="px-4 py-2 text-sm"
-                :class="confirmDanger ? 'btn-danger' : 'btn-primary'"
-                type="button"
-                :disabled="confirmLoading"
-                @click="onConfirmDialogConfirm"
-              >
-                {{ confirmLoading ? $t("common.saving") : confirmLabel }}
-              </button>
-            </footer>
-          </section>
-        </div>
-      </Transition>
+      <ConfirmDialog
+        v-model="confirmOpen"
+        :title="confirmTitle"
+        :message="confirmMessage"
+        :confirm-label="confirmLabel"
+        :danger="confirmDanger"
+        :loading="confirmLoading"
+        @cancel="closeConfirmDialog"
+        @confirm="onConfirmDialogConfirm"
+      />
     </Teleport>
   </div>
 </template>

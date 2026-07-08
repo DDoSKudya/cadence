@@ -69,5 +69,5 @@ class TagService:
         )
         if not created and tag.name != cleaned:
             tag.name = cleaned
-            tag.save(update_fields=["name", "updated_at"])
+            tag.save(update_fields=["name"])
         return tag

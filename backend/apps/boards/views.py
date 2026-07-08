@@ -38,6 +38,19 @@ def scheme_switch_payload(board) -> dict[str, object]:
     }
 
 
+def validation_error_payload(exc: ValidationError) -> dict[str, object]:
+    detail = exc.detail
+    if isinstance(detail, dict):
+        return (
+            {"detail": detail}
+            if "detail" not in detail
+            else {"detail": detail["detail"], **detail}
+        )
+    if isinstance(detail, list):
+        return {"detail": detail}
+    return {"detail": str(detail)}
+
+
 class ColumnListCreateView(APIView):
     def get(self, request):
         board = ColumnSettingsService.get_default_board()
@@ -122,7 +135,7 @@ class ColumnReorderView(APIView):
             )
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(BoardColumnSerializer(columns, many=True).data)
@@ -144,7 +157,7 @@ class ColumnWorkflowView(APIView):
             )
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(workflow)
@@ -167,7 +180,7 @@ class TaskStatusGraphView(APIView):
             )
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(graph)
@@ -183,7 +196,7 @@ class TaskStatusGraphView(APIView):
             )
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(graph)
@@ -222,7 +235,7 @@ class BoardSchemeListView(APIView):
             BoardSchemeService.switch_scheme(board, scheme.slug)
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -247,7 +260,7 @@ class BoardSchemeSwitchView(APIView):
             )
         except ValidationError as exc:
             return Response(
-                {"detail": str(exc.detail)},
+                validation_error_payload(exc),
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

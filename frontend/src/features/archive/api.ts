@@ -1,5 +1,6 @@
 import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { expectJson } from "@/shared/api/json";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -7,13 +8,6 @@ import type {
   ArchiveListResponse,
   ArchiveTaskDetail,
 } from "./types";
-
-async function parseJson<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw new Error(await readApiError(response, fallback));
-  }
-  return response.json() as Promise<T>;
-}
 
 function buildQuery(filters: ArchiveFilters): string {
   const params = new URLSearchParams();
@@ -45,12 +39,12 @@ export async function fetchArchiveTasks(
 ): Promise<ArchiveListResponse> {
   const query = buildQuery(filters);
   const response = await apiFetch(`/api/v1/archive/tasks/?${query}`);
-  return parseJson(response, t("archive.loadFailed"));
+  return expectJson(response, t("archive.loadFailed"));
 }
 
 export async function fetchArchiveTask(taskId: number): Promise<ArchiveTaskDetail> {
   const response = await apiFetch(`/api/v1/archive/tasks/${taskId}/`);
-  return parseJson(response, t("board.loadFailed"));
+  return expectJson(response, t("board.loadFailed"));
 }
 
 export async function reopenArchiveTask(taskId: number): Promise<void> {

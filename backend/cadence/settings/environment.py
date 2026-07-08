@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 _REPO_ROOT_DEFAULT = str(BACKEND_DIR.parent)
@@ -27,9 +28,19 @@ env = environ.Env(
     TASK_INBOX_FAILED_DIR=(str, f"{_INBOX_ROOT_DEFAULT}/failed"),
 )
 
-for env_file in (BACKEND_DIR.parent / ".env", BACKEND_DIR.parent / ".env.example"):
-    if env_file.exists():
-        env.read_env(env_file)
+env_file = BACKEND_DIR.parent / ".env"
+example_env_file = BACKEND_DIR.parent / ".env.example"
+if env_file.exists():
+    env.read_env(env_file)
+elif example_env_file.exists():
+    env.read_env(example_env_file)
+
+if env.str("DJANGO_SETTINGS_MODULE", "").endswith(".prod"):
+    secret_key = env("DJANGO_SECRET_KEY")
+    if not secret_key or secret_key == "change-me":
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be configured explicitly in production.",
+        )
 
 
 def repo_root() -> Path:

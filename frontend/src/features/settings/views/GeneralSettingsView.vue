@@ -6,6 +6,10 @@ import { ArrowPathIcon, GlobeAltIcon } from "@heroicons/vue/24/outline";
 
 import ProjectMonitoringPanel from "@/features/settings/components/ProjectMonitoringPanel.vue";
 import ProjectSettingsPanel from "@/features/settings/components/ProjectSettingsPanel.vue";
+import {
+  readAllowedQueryValue,
+  replaceSettingsQueryParam,
+} from "@/features/settings/query-state";
 import { usePlatformStatus } from "@/features/settings/usePlatformStatus";
 import { useProjectSettings } from "@/features/settings/useProjectSettings";
 
@@ -18,17 +22,11 @@ const platform = usePlatformStatus();
 const activeItem = ref<string | null>(null);
 
 function syncRoute() {
-  const current = typeof route.query.item === "string" ? route.query.item : null;
+  const current = readAllowedQueryValue(route.query.item, ["language", "timezone"]);
   if (current === activeItem.value) {
     return;
   }
-  const query: Record<string, string> = {};
-  if (typeof route.query.service === "string") {
-    query.service = route.query.service;
-  }
-  if (activeItem.value) {
-    query.item = activeItem.value;
-  }
+  const query = replaceSettingsQueryParam(route.query, "item", activeItem.value);
   void router.replace({
     name: "settings-general",
     query,
@@ -36,8 +34,7 @@ function syncRoute() {
 }
 
 function applyRouteState() {
-  const item = typeof route.query.item === "string" ? route.query.item : null;
-  const next = item === "language" || item === "timezone" ? item : null;
+  const next = readAllowedQueryValue(route.query.item, ["language", "timezone"]);
   if (activeItem.value === next) {
     return;
   }
@@ -81,7 +78,7 @@ onMounted(async () => {
       <div v-if="settings.loading.value" class="settings-body settings-body-center">
         <div class="loading-state">
           <span class="loading-spinner" aria-hidden="true" />
-          <p class="text-sm text-[var(--color-text-secondary)]">{{ t("common.loading") }}</p>
+          <p class="text-sm text-(--color-text-secondary)">{{ t("common.loading") }}</p>
         </div>
       </div>
 

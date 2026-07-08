@@ -11,6 +11,7 @@ from apps.analytics.models import (
 )
 from apps.analytics.services import AnalyticsExportService
 from apps.analytics.tasks import run_analytics_export
+from apps.core.tag_services import TagService
 from apps.imports.job_handlers import JsonImportFileHandler, JsonInboxScanHandler
 from apps.imports.models import ImportLog, ImportStatus
 from apps.imports.services import ImportProcessResult
@@ -229,3 +230,34 @@ def test_analytics_ec_export_api_create(media_root, api_client):
         )
     assert response.status_code == 201
     assert AnalyticsExportJob.objects.filter(export_type=ExportType.TASKS).exists()
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_download_missing_file_returns_conflict(
+    media_root, api_client
+):
+    export_job = AnalyticsExportJob.objects.create(
+        export_type=ExportType.TASKS,
+        file_format=FileFormat.CSV,
+        status=ExportStatus.SUCCEEDED,
+        file_path="exports/analytics/missing.csv",
+        filters={},
+    )
+    response = api_client.get(
+        reverse("analytics-export-download", args=[export_job.id])
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Export file is unavailable."
+
+
+@pytest.mark.django_db
+def test_core_ec_tag_service_renames_existing_slug_without_missing_updated_at(
+    active_scheme,
+):
+    tag = TagService.get_or_create_by_name(scheme=active_scheme, name="Original Name")
+    renamed = TagService.get_or_create_by_name(
+        scheme=active_scheme,
+        name="Original   Name",
+    )
+    assert renamed.id == tag.id
+    assert renamed.name == "Original   Name"

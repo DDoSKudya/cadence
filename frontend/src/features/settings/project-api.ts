@@ -1,5 +1,5 @@
-import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { expectJson } from "@/shared/api/json";
 import { apiFetch } from "@/shared/api/http";
 
 export type AppLocale = "en" | "ru";
@@ -182,16 +182,9 @@ function cloneForm(source: NotificationSettingsForm): NotificationSettingsForm {
   };
 }
 
-async function parseJson<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw new Error(await readApiError(response, fallback));
-  }
-  return response.json() as Promise<T>;
-}
-
 export async function fetchNotificationSettings(): Promise<NotificationSettingsForm> {
   const response = await apiFetch("/api/v1/settings/");
-  const raw = await parseJson<unknown>(response, t("errors.loadSettings"));
+  const raw = await expectJson<unknown>(response, t("errors.loadSettings"));
   if (!isNotificationSettingsApiSupported(raw)) {
     throw new Error(t("errors.backendOutdated"));
   }
@@ -204,7 +197,7 @@ export async function checkTelegramBot(token?: string): Promise<TelegramBotCheck
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson<TelegramBotCheckResult>(response, t("errors.checkBot"));
+  return expectJson<TelegramBotCheckResult>(response, t("errors.checkBot"));
 }
 
 export function applyTelegramBotCheck(
@@ -228,7 +221,7 @@ export async function saveNotificationSettings(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  const raw = await parseJson<unknown>(response, t("errors.saveSettings"));
+  const raw = await expectJson<unknown>(response, t("errors.saveSettings"));
   if (!isNotificationSettingsApiSupported(raw)) {
     throw new Error(t("errors.telegramNotSaved"));
   }
@@ -244,14 +237,6 @@ export async function saveNotificationSettings(
     throw new Error(t("errors.recipientsNotSaved"));
   }
   return saved;
-}
-
-export async function fetchProjectSettings(): Promise<NotificationSettingsForm> {
-  return fetchNotificationSettings();
-}
-
-export async function saveProjectLanguage(language: AppLocale): Promise<NotificationSettingsForm> {
-  return saveNotificationSettings({ language });
 }
 
 export function cloneNotificationSettings(

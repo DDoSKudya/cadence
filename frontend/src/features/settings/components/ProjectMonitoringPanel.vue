@@ -14,6 +14,10 @@ import type { Component } from "vue";
 import ServiceLogPanel from "@/features/settings/components/ServiceLogPanel.vue";
 import type { PlatformStatus, ServiceHealth, ServiceStatus } from "@/features/settings/platform-api";
 import { useProjectClock } from "@/features/settings/useProjectClock";
+import {
+  readAllowedQueryValue,
+  replaceSettingsQueryParam,
+} from "@/features/settings/query-state";
 import type { NotificationSettingsForm } from "@/features/settings/project-api";
 import { formatDateTime } from "@/lib/datetime";
 
@@ -140,17 +144,11 @@ function closeServiceLogs() {
 
 function syncServiceQuery() {
   const nextService = activeServiceId.value;
-  const currentService = typeof route.query.service === "string" ? route.query.service : null;
+  const currentService = readAllowedQueryValue(route.query.service, [...SERVICE_IDS]);
   if (nextService === currentService) {
     return;
   }
-  const query: Record<string, string> = {};
-  if (typeof route.query.item === "string") {
-    query.item = route.query.item;
-  }
-  if (nextService) {
-    query.service = nextService;
-  }
+  const query = replaceSettingsQueryParam(route.query, "service", nextService);
   void router.replace({
     name: "settings-general",
     query,
@@ -158,8 +156,7 @@ function syncServiceQuery() {
 }
 
 function applyServiceFromRoute() {
-  const service = typeof route.query.service === "string" ? route.query.service : null;
-  const next = service && SERVICE_IDS.has(service) ? service : null;
+  const next = readAllowedQueryValue(route.query.service, [...SERVICE_IDS]);
   if (activeServiceId.value === next) {
     return;
   }

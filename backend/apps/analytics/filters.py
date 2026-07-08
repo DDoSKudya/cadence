@@ -131,11 +131,26 @@ def resolve_tag_ids(tags: list[str]) -> list[int]:
     if not tags:
         return []
     scheme = TagService.get_active_scheme()
+    cleaned = [value.strip() for value in tags if value.strip()]
+    if not cleaned:
+        return []
+
+    active_tags = list(
+        Tag.objects.filter(
+            scheme=scheme,
+            is_active=True,
+        ).only("id", "slug", "name")
+    )
+    by_slug = {tag.slug: tag.id for tag in active_tags}
+    by_name = {tag.name.lower(): tag.id for tag in active_tags}
+
     tag_ids: list[int] = []
-    for value in tags:
-        tag = Tag.objects.filter(scheme=scheme, slug=value).first()
-        if tag is None:
-            tag = Tag.objects.filter(scheme=scheme, name__iexact=value).first()
-        if tag is not None:
-            tag_ids.append(tag.id)
+    seen_ids: set[int] = set()
+    for value in cleaned:
+        tag_id = by_slug.get(value)
+        if tag_id is None:
+            tag_id = by_name.get(value.lower())
+        if tag_id is not None and tag_id not in seen_ids:
+            seen_ids.add(tag_id)
+            tag_ids.append(tag_id)
     return tag_ids

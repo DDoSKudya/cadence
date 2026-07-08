@@ -89,6 +89,7 @@ def test_analytics_ec_filters_parse_filters_payload_period_bounds_and_tag_resolu
     make_tag,
 ):
     tag = make_tag("Ops", slug="ops")
+    make_tag("Inactive", slug="inactive", is_active=False)
     filters = parse_filters_payload(
         {
             "week": f"{current_week.iso_year}-W{current_week.iso_week:02d}",
@@ -104,6 +105,7 @@ def test_analytics_ec_filters_parse_filters_payload_period_bounds_and_tag_resolu
     assert filters.source == "api"
     ids = resolve_tag_ids(["ops", "OPS", "missing"])
     assert tag.id in ids
+    assert resolve_tag_ids(["inactive"]) == []
 
 
 @pytest.mark.django_db
@@ -234,6 +236,20 @@ def test_analytics_ec_export_preview_notifications_matches_export_rows(
     sheets = {sheet["id"]: sheet for sheet in response.json()["sheets"]}
     assert sheets["notifications"]["total"] >= 1
     assert sheets["notifications"]["rows"]
+
+
+@pytest.mark.django_db
+def test_analytics_ec_export_preview_weekly_summary_exposes_kpis(
+    api_client, analytics_task_data
+):
+    response = api_client.get(
+        reverse("analytics-export-preview"),
+        {"export_type": ExportType.WEEKLY_SUMMARY, "locale": "ru"},
+    )
+    assert response.status_code == 200
+    first_sheet = response.json()["sheets"][0]
+    assert "kpis" in first_sheet
+    assert isinstance(first_sheet["kpis"], dict)
 
 
 @pytest.mark.django_db

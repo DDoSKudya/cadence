@@ -1,5 +1,5 @@
-import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { expectJson } from "@/shared/api/json";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -11,21 +11,14 @@ import type {
   TaskUpdatePayload,
 } from "./types";
 
-async function parseJson<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw new Error(await readApiError(response, fallback));
-  }
-  return response.json() as Promise<T>;
-}
-
 export async function fetchBoard(weekKey: string): Promise<BoardResponse> {
   const response = await apiFetch(`/api/v1/board/?week=${encodeURIComponent(weekKey)}`);
-  return parseJson(response, t("board.loadBoardFailed"));
+  return expectJson(response, t("board.loadBoardFailed"));
 }
 
 export async function fetchTask(taskId: number): Promise<TaskDetail> {
   const response = await apiFetch(`/api/v1/tasks/${taskId}/`);
-  return parseJson(response, t("board.loadFailed"));
+  return expectJson(response, t("board.loadFailed"));
 }
 
 export async function searchTasks(query: string, excludeTaskId?: number): Promise<BoardTask[]> {
@@ -38,12 +31,12 @@ export async function searchTasks(query: string, excludeTaskId?: number): Promis
   }
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const response = await apiFetch(`/api/v1/tasks/${suffix}`);
-  return parseJson(response, t("board.searchTasksFailed"));
+  return expectJson(response, t("board.searchTasksFailed"));
 }
 
 export async function fetchTags(): Promise<Tag[]> {
   const response = await apiFetch("/api/v1/tags/");
-  return parseJson(response, t("errors.loadTags"));
+  return expectJson(response, t("errors.loadTags"));
 }
 
 export async function createTask(payload: TaskCreatePayload): Promise<BoardTask> {
@@ -51,7 +44,7 @@ export async function createTask(payload: TaskCreatePayload): Promise<BoardTask>
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("board.createFailed"));
+  return expectJson(response, t("board.createFailed"));
 }
 
 export async function updateTask(taskId: number, payload: TaskUpdatePayload) {
@@ -59,7 +52,7 @@ export async function updateTask(taskId: number, payload: TaskUpdatePayload) {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  return parseJson<TaskDetail>(response, t("board.saveFailed"));
+  return expectJson<TaskDetail>(response, t("board.saveFailed"));
 }
 
 export async function moveTask(
@@ -74,7 +67,7 @@ export async function moveTask(
       target_position: targetPosition,
     }),
   });
-  return parseJson<BoardTask>(response, t("board.moveFailed"));
+  return expectJson<BoardTask>(response, t("board.moveFailed"));
 }
 
 export async function closeTask(taskId: number, completionNote = "") {
@@ -84,5 +77,5 @@ export async function closeTask(taskId: number, completionNote = "") {
       completion_note: completionNote,
     }),
   });
-  return parseJson<TaskDetail>(response, t("board.closeFailed"));
+  return expectJson<TaskDetail>(response, t("board.closeFailed"));
 }
