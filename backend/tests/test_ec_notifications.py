@@ -44,6 +44,48 @@ def test_notifications_ec_stale_planned_creates_notification(
 
 
 @pytest.mark.django_db
+def test_notifications_ec_stale_in_progress_uses_bound_column_semantics(
+    telegram_enabled,
+    stale_task,
+    in_progress_column,
+):
+    from apps.boards.models import TaskStatus
+
+    custom_status = TaskStatus.objects.create(
+        board=stale_task.board,
+        column=in_progress_column,
+        name="Working now",
+        slug="working-now",
+        color="amber",
+        on_flow=True,
+        position=999,
+    )
+    stale_task.column = in_progress_column
+    stale_task.task_status = custom_status
+    stale_task.column_entered_at = timezone.now() - timedelta(hours=3)
+    stale_task.next_reminder_at = None
+    stale_task.save(
+        update_fields=[
+            "column",
+            "task_status",
+            "column_entered_at",
+            "next_reminder_at",
+            "updated_at",
+        ]
+    )
+
+    with patch(
+        "apps.notifications.tasks.send_telegram_notification.delay"
+    ) as mocked_delay:
+        result = ReminderPlanningService.scan()
+
+    assert result["planned"] >= 1
+    notification = NotificationJob.objects.filter(task=stale_task).latest("id")
+    assert notification.reason == NotificationReason.STALE_IN_PROGRESS
+    assert mocked_delay.called
+
+
+@pytest.mark.django_db
 def test_notifications_ec_dedup_prevents_duplicate_notifications(
     telegram_enabled, stale_task
 ):

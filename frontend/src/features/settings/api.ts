@@ -1,21 +1,15 @@
 import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
+import { expectJson } from "@/shared/api/json";
 import { apiFetch } from "@/shared/api/http";
 
 import type { BoardScheme, BoardSchemesResponse, ColumnsListResponse, SettingsColumn } from "./types";
 import type { ColumnWorkflow } from "./workflow";
 import type { TaskStatusGraph } from "./task-status-graph";
 
-async function parseJson<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw new Error(await readApiError(response, fallback));
-  }
-  return response.json() as Promise<T>;
-}
-
 export async function fetchBoardSchemes(): Promise<BoardSchemesResponse> {
   const response = await apiFetch("/api/v1/board/schemes/");
-  return parseJson(response, t("errors.loadSchemes"));
+  return expectJson(response, t("errors.loadSchemes"));
 }
 
 export interface SchemeSwitchResult {
@@ -39,7 +33,7 @@ export async function createBoardScheme(
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("errors.createScheme"));
+  return expectJson(response, t("errors.createScheme"));
 }
 
 export async function switchBoardScheme(slug: string): Promise<SchemeSwitchResult> {
@@ -47,7 +41,7 @@ export async function switchBoardScheme(slug: string): Promise<SchemeSwitchResul
     method: "POST",
     body: JSON.stringify({ slug, confirm: true }),
   });
-  return parseJson(response, t("errors.switchScheme"));
+  return expectJson(response, t("errors.switchScheme"));
 }
 
 export async function deleteBoardScheme(slug: string): Promise<void> {
@@ -62,7 +56,7 @@ export async function deleteBoardScheme(slug: string): Promise<void> {
 
 export async function fetchColumns(): Promise<ColumnsListResponse> {
   const response = await apiFetch("/api/v1/columns/");
-  return parseJson(response, t("errors.loadColumns"));
+  return expectJson(response, t("errors.loadColumns"));
 }
 
 export async function reorderColumns(columnIds: number[]): Promise<SettingsColumn[]> {
@@ -70,7 +64,7 @@ export async function reorderColumns(columnIds: number[]): Promise<SettingsColum
     method: "POST",
     body: JSON.stringify({ column_ids: columnIds }),
   });
-  return parseJson(response, t("errors.reorderColumns"));
+  return expectJson(response, t("errors.reorderColumns"));
 }
 
 export interface ColumnCreatePayload {
@@ -92,7 +86,7 @@ export async function createColumn(payload: ColumnCreatePayload): Promise<Settin
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("errors.createColumn"));
+  return expectJson(response, t("errors.createColumn"));
 }
 
 export async function updateColumn(
@@ -103,7 +97,7 @@ export async function updateColumn(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("errors.saveColumn"));
+  return expectJson(response, t("errors.saveColumn"));
 }
 
 export class ColumnInUseError extends Error {
@@ -127,7 +121,7 @@ export async function deleteColumn(columnId: number): Promise<void> {
 
 export async function fetchColumnWorkflow(): Promise<ColumnWorkflow> {
   const response = await apiFetch("/api/v1/columns/workflow/");
-  return parseJson(response, t("errors.loadWorkflow"));
+  return expectJson(response, t("errors.loadWorkflow"));
 }
 
 export async function saveColumnWorkflow(
@@ -137,12 +131,12 @@ export async function saveColumnWorkflow(
     method: "PUT",
     body: JSON.stringify({ transitions }),
   });
-  return parseJson(response, t("errors.saveWorkflow"));
+  return expectJson(response, t("errors.saveWorkflow"));
 }
 
 export async function fetchTaskStatusGraph(): Promise<TaskStatusGraph> {
   const response = await apiFetch("/api/v1/task-statuses/");
-  return parseJson(response, t("errors.loadStatusWorkflow"));
+  return expectJson(response, t("errors.loadStatusWorkflow"));
 }
 
 export async function saveTaskStatusGraph(payload: {
@@ -153,7 +147,7 @@ export async function saveTaskStatusGraph(payload: {
     method: "PUT",
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("errors.saveStatusWorkflow"));
+  return expectJson(response, t("errors.saveStatusWorkflow"));
 }
 
 export async function saveTaskStatusLayout(
@@ -163,5 +157,5 @@ export async function saveTaskStatusLayout(
     method: "PATCH",
     body: JSON.stringify({ statuses }),
   });
-  return parseJson(response, t("errors.saveStatusWorkflow"));
+  return expectJson(response, t("errors.saveStatusWorkflow"));
 }

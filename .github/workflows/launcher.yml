@@ -1,0 +1,74 @@
+name: Launcher Build
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  test-launcher:
+    name: Test launcher
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: tools/launcher
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install launcher dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Run launcher tests
+        run: uv run pytest
+
+  build-launcher:
+    name: Build launcher (${{ matrix.os }})
+    needs: test-launcher
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    defaults:
+      run:
+        working-directory: tools/launcher
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 \
+            libglib2.0-0 \
+            libxcb-cursor0 \
+            libxkbcommon-x11-0
+
+      - name: Install launcher build dependencies
+        run: uv sync --frozen --extra build
+
+      - name: Build launcher bundle
+        run: uv run python scripts/build.py
+
+      - name: Upload launcher artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cadence-launcher-${{ matrix.os }}
+          path: tools/launcher/dist/CadenceLauncher-*.zip

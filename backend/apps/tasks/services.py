@@ -192,7 +192,6 @@ class TaskUpdateService:
         if data.links_provided and data.links is not None:
             TaskLinkService.sync_outgoing_links(task, data.links)
 
-        status_changed = False
         if data.task_status_provided:
             actor = resolve_request_context(data.request)
             task = TaskStatusChangeService.apply(
@@ -200,15 +199,9 @@ class TaskUpdateService:
                 target_status_id=data.task_status_id,
                 actor=actor,
             )
-            status_changed = True
-
-        if data.tag_slugs is not None:
-            TaskCreationService._set_tags(task, data.tag_slugs)
 
         if fields or data.tag_slugs is not None:
             record_request_event(task, TaskEventType.UPDATED, data.request)
-        elif not status_changed and data.task_status_provided:
-            pass
 
         return task
 

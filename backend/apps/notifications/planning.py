@@ -4,6 +4,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.boards.models import SystemType
+from apps.boards.task_status_services import TaskStatusService
 from apps.core.models import ProjectSettings
 from apps.jobs.models import JobType
 from apps.jobs.services import JobService
@@ -19,9 +20,6 @@ from apps.notifications.scheduling import (
     schedule_next_reminder,
 )
 from apps.tasks.models import Task
-
-IN_PROGRESS_STATUS_SLUGS = frozenset({"process", "testing"})
-PLANNED_STATUS_SLUGS = frozenset({"open", "ready_on_develop"})
 
 
 class ReminderPlanningService:
@@ -139,14 +137,19 @@ class ReminderPlanningService:
     def _is_stale_in_progress(task: Task) -> bool:
         status = task.task_status
         if status is not None:
-            return status.slug in IN_PROGRESS_STATUS_SLUGS
+            return (
+                TaskStatusService.status_system_type(status) == SystemType.IN_PROGRESS
+            )
         return task.column.system_type == SystemType.IN_PROGRESS
 
     @staticmethod
     def _is_stale_planned(task: Task) -> bool:
         status = task.task_status
         if status is not None:
-            return status.slug in PLANNED_STATUS_SLUGS
+            return TaskStatusService.status_system_type(status) in (
+                SystemType.PLANNED,
+                SystemType.BACKLOG,
+            )
         return task.column.system_type in (SystemType.PLANNED, SystemType.BACKLOG)
 
     @staticmethod

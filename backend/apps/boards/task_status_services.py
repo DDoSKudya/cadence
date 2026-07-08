@@ -499,6 +499,58 @@ class TaskStatusService:
         )
 
     @staticmethod
+    def status_system_type(status: TaskStatus | None) -> str | None:
+        if status is None:
+            return None
+        if status.column_id is not None and status.column is not None:
+            return status.column.system_type
+        system_type = (status.rules or {}).get("system_type")
+        if isinstance(system_type, str) and system_type:
+            return system_type
+        if status.slug in {choice.value for choice in SystemType}:
+            return status.slug
+        return None
+
+    @staticmethod
+    def resolve_status_for_system_type(
+        board: Board,
+        *,
+        system_types: tuple[str, ...],
+        prefer_slugs: tuple[str, ...] = (),
+        terminal_only: bool | None = None,
+    ) -> TaskStatus | None:
+        statuses = list(
+            TaskStatus.objects.filter(board=board, on_flow=True)
+            .select_related("column")
+            .order_by("position")
+        )
+        matches: list[TaskStatus] = []
+        for status in statuses:
+            if terminal_only is not None and status.is_terminal != terminal_only:
+                continue
+            if TaskStatusService.status_system_type(status) in system_types:
+                matches.append(status)
+        if not matches:
+            return None
+        if prefer_slugs:
+            for slug in prefer_slugs:
+                preferred = next(
+                    (status for status in matches if status.slug == slug),
+                    None,
+                )
+                if preferred is not None:
+                    return preferred
+        return matches[0]
+
+    @staticmethod
+    def is_done_status(status: TaskStatus | None) -> bool:
+        if status is None or not status.is_terminal:
+            return False
+        if (status.rules or {}).get("semantic") == "done":
+            return True
+        return status.slug == "done"
+
+    @staticmethod
     def list_allowed_targets(
         *,
         board: Board,

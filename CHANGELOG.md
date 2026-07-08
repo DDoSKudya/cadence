@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+## 1.2.0 — 2026-07-08
+
+Minor release: cross-platform desktop launcher (alpha) and developer workflow refresh.
+
+### Features
+
+- Seed default superuser `admin` / `admin` on migrate for local and production-like stacks
+
+### Tooling
+
+- Add cross-platform desktop launcher (alpha, v0.9.1a1) for the production Docker stack: PySide6 UI, prod-only `docker compose` orchestration, repo discovery, EN/RU locale, PyInstaller build script, and CI matrix artifacts for Linux, macOS, and Windows
+
+### Infrastructure
+
+- Replace local `make`-based developer workflow with cross-platform `mise` tasks and align CI/docs around `.mise.toml`
+
 ## 1.1.1 — 2026-06-28
 
 Patch release: board task visibility and UX fixes.

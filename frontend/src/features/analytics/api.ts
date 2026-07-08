@@ -1,6 +1,7 @@
 import { readApiError } from "@/lib/api-error";
 import { t } from "@/i18n";
 import { getI18nLocale } from "@/i18n";
+import { expectJson } from "@/shared/api/json";
 import { apiFetch } from "@/shared/api/http";
 
 import type {
@@ -17,13 +18,6 @@ import type {
   TaskFlowData,
   WeeklyTrendItem,
 } from "./types";
-
-async function parseJson<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw new Error(await readApiError(response, fallback));
-  }
-  return response.json() as Promise<T>;
-}
 
 function buildQuery(filters: AnalyticsFilters, extra: Record<string, string> = {}): string {
   const params = new URLSearchParams();
@@ -53,7 +47,7 @@ export async function fetchAnalyticsSummary(filters: AnalyticsFilters): Promise<
   const response = await apiFetch(
     query ? `/api/v1/analytics/summary/?${query}` : "/api/v1/analytics/summary/",
   );
-  return parseJson(response, t("errors.loadSummary"));
+  return expectJson(response, t("errors.loadSummary"));
 }
 
 export async function fetchWeeklyTrend(
@@ -62,7 +56,7 @@ export async function fetchWeeklyTrend(
 ): Promise<{ items: WeeklyTrendItem[] }> {
   const query = buildQuery(filters, { weeks: String(weeks) });
   const response = await apiFetch(`/api/v1/analytics/weekly-trend/?${query}`);
-  return parseJson(response, t("errors.loadTrend"));
+  return expectJson(response, t("errors.loadTrend"));
 }
 
 export async function fetchBreakdown(
@@ -71,7 +65,7 @@ export async function fetchBreakdown(
 ): Promise<{ group_by: string; items: BreakdownItem[] }> {
   const query = buildQuery(filters, { group_by: groupBy });
   const response = await apiFetch(`/api/v1/analytics/breakdown/?${query}`);
-  return parseJson(response, t("errors.loadBreakdown"));
+  return expectJson(response, t("errors.loadBreakdown"));
 }
 
 export async function fetchCycleTime(filters: AnalyticsFilters): Promise<CycleTimeData> {
@@ -79,7 +73,7 @@ export async function fetchCycleTime(filters: AnalyticsFilters): Promise<CycleTi
   const response = await apiFetch(
     query ? `/api/v1/analytics/cycle-time/?${query}` : "/api/v1/analytics/cycle-time/",
   );
-  return parseJson(response, t("errors.loadCycleTime"));
+  return expectJson(response, t("errors.loadCycleTime"));
 }
 
 export async function fetchNotificationMetrics(
@@ -91,7 +85,7 @@ export async function fetchNotificationMetrics(
       ? `/api/v1/analytics/notifications/?${query}`
       : "/api/v1/analytics/notifications/",
   );
-  return parseJson(response, t("errors.loadNotificationMetrics"));
+  return expectJson(response, t("errors.loadNotificationMetrics"));
 }
 
 export async function fetchTaskFlow(filters: AnalyticsFilters): Promise<TaskFlowData> {
@@ -99,7 +93,7 @@ export async function fetchTaskFlow(filters: AnalyticsFilters): Promise<TaskFlow
   const response = await apiFetch(
     query ? `/api/v1/analytics/task-flow/?${query}` : "/api/v1/analytics/task-flow/",
   );
-  return parseJson(response, t("errors.loadFlow"));
+  return expectJson(response, t("errors.loadFlow"));
 }
 
 export async function fetchArchiveAnalytics(filters: AnalyticsFilters): Promise<ArchiveAnalytics> {
@@ -107,7 +101,7 @@ export async function fetchArchiveAnalytics(filters: AnalyticsFilters): Promise<
   const response = await apiFetch(
     query ? `/api/v1/analytics/archive/?${query}` : "/api/v1/analytics/archive/",
   );
-  return parseJson(response, t("errors.loadArchiveAnalytics"));
+  return expectJson(response, t("errors.loadArchiveAnalytics"));
 }
 
 export async function fetchExportPreview(
@@ -118,7 +112,7 @@ export async function fetchExportPreview(
   params.set("export_type", exportType);
   params.set("locale", getI18nLocale());
   const response = await apiFetch(`/api/v1/analytics/exports/preview/?${params.toString()}`);
-  return parseJson(response, t("errors.loadExportPreview"));
+  return expectJson(response, t("errors.loadExportPreview"));
 }
 
 export async function createAnalyticsExport(payload: {
@@ -131,12 +125,12 @@ export async function createAnalyticsExport(payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, t("analytics.exportFailed"));
+  return expectJson(response, t("analytics.exportFailed"));
 }
 
 export async function fetchAnalyticsExport(exportId: number): Promise<AnalyticsExportJob> {
   const response = await apiFetch(`/api/v1/analytics/exports/${exportId}/`);
-  return parseJson(response, t("errors.loadExport"));
+  return expectJson(response, t("errors.loadExport"));
 }
 
 export async function downloadAnalyticsExport(exportId: number): Promise<void> {

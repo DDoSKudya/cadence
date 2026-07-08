@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cadence-launcher"
+version = "0.9.1a1"
+description = "Cross-platform alpha desktop launcher for Cadence"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "platformdirs>=4.3.0",
+    "PySide6>=6.9.0",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.10.0",
+]
+dev = [
+    "pytest>=8.3.0",
+]
+
+[project.scripts]
+cadence-launcher = "cadence_launcher.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/cadence_launcher/i18n.py" = ["E501"]
+"tests/*.py" = ["E501", "SIM117"]

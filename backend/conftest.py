@@ -69,7 +69,16 @@ def backlog_column(board):
 
 @pytest.fixture
 def planned_column(board):
-    return BoardColumn.objects.get(board=board, system_type=SystemType.BACKLOG)
+    column = (
+        BoardColumn.objects.filter(
+            board=board,
+            system_type__in=(SystemType.PLANNED, SystemType.BACKLOG),
+        )
+        .order_by("position")
+        .first()
+    )
+    assert column is not None
+    return column
 
 
 @pytest.fixture

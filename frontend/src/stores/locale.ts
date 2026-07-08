@@ -3,9 +3,9 @@ import { computed, ref } from "vue";
 
 import {
   type AppLocale,
-  fetchProjectSettings,
+  fetchNotificationSettings,
   normalizeAppLocale,
-  saveProjectLanguage,
+  saveNotificationSettings,
 } from "@/features/settings/project-api";
 import { DEFAULT_LOCALE, setI18nLocale } from "@/i18n";
 
@@ -25,7 +25,7 @@ export const useLocaleStore = defineStore("locale", () => {
   async function load() {
     error.value = "";
     try {
-      const settings = await fetchProjectSettings();
+      const settings = await fetchNotificationSettings();
       applyLocale(settings.language);
     } catch (loadError) {
       applyLocale(DEFAULT_LOCALE);
@@ -44,7 +44,7 @@ export const useLocaleStore = defineStore("locale", () => {
     error.value = "";
 
     try {
-      const settings = await saveProjectLanguage(normalized);
+      const settings = await saveNotificationSettings({ language: normalized });
       applyLocale(settings.language);
     } catch (saveError) {
       applyLocale(previous);

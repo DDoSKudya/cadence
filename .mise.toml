@@ -1,0 +1,30 @@
+[tools]
+python = "3.12"
+node = "22"
+uv = "latest"
+
+[tasks.up]
+description = "Start production-like Docker stack in background"
+env = { DJANGO_SETTINGS_MODULE = "cadence.settings.prod", DJANGO_DEBUG = "false", GUNICORN_EXTRA_ARGS = "--workers 2", DJANGO_SECRET_KEY = "local-prod-secret-key-for-mise-up-only" }
+run = "docker compose --profile prod up -d --build"
+
+[tasks.dev]
+description = "Start development Docker stack in foreground"
+env = { DJANGO_SETTINGS_MODULE = "cadence.settings.dev", DJANGO_DEBUG = "true", GUNICORN_EXTRA_ARGS = "--reload" }
+run = "docker compose --profile dev up --build"
+
+[tasks.down]
+description = "Stop all Docker profiles"
+run = "docker compose --profile dev --profile prod down"
+
+[tasks.lint]
+description = "Run pre-commit on all files"
+run = "uv tool run pre-commit run --all-files --show-diff-on-failure"
+
+[tasks.test]
+description = "Run full repository verification"
+run = [
+  "cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy . && DJANGO_SETTINGS_MODULE=cadence.settings.test uv run python manage.py makemigrations --check --dry-run && uv run pytest",
+  "cd frontend && npm run typecheck && npm run test -- --run && npm run build",
+  "cd tools/launcher && uv sync --frozen --extra dev && uv run pytest",
+]

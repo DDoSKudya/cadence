@@ -28,11 +28,10 @@ from apps.tasks.services import (
     TaskCreateData,
     TaskMoveService,
     TaskReopenService,
-    TaskUpdateInput,
     TaskUpdateService,
     create_task_from_request,
-    parse_task_link_inputs,
 )
+from apps.tasks.task_update_payload import build_task_update_input
 from apps.weeks.rollover import WeekRolloverService
 from apps.weeks.services import WeekService
 
@@ -95,49 +94,7 @@ class TaskDetailView(APIView):
         serializer = TaskUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
-        week = None
-        week_provided = False
-        clear_week = False
-        if "week" in data:
-            week_provided = True
-            if data["week"] is None:
-                clear_week = True
-            else:
-                week = WeekService.resolve_week(data["week"])
-
-        clear_due_at = "due_at" in data and data["due_at"] is None
-        clear_reminder_interval = (
-            "reminder_interval_minutes" in data
-            and data["reminder_interval_minutes"] is None
-        )
-        clear_story_points = "story_points" in data and data["story_points"] is None
-
-        update_input = TaskUpdateInput(
-            request=request,
-            title=data.get("title"),
-            description=data.get("description"),
-            task_type=data.get("task_type"),
-            priority=data.get("priority"),
-            week=week,
-            week_provided=week_provided,
-            clear_week=clear_week,
-            due_at=data.get("due_at"),
-            clear_due_at=clear_due_at,
-            reminder_enabled=data.get("reminder_enabled"),
-            reminder_interval_minutes=data.get("reminder_interval_minutes"),
-            clear_reminder_interval=clear_reminder_interval,
-            tag_slugs=data.get("tags"),
-            task_status_id=data.get("task_status_id"),
-            task_status_provided="task_status_id" in data,
-            story_points=data.get("story_points"),
-            clear_story_points=clear_story_points,
-            external_ref=data.get("external_ref"),
-            links=(
-                parse_task_link_inputs(data.get("links")) if "links" in data else None
-            ),
-            links_provided="links" in data,
-        )
+        update_input = build_task_update_input(request, data)
         task = TaskUpdateService.update(task, update_input)
         task = self._load_task(task.pk)
         return Response(TaskSerializer(task).data)

@@ -1,7 +1,8 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.boards.models import TaskStatus
+from apps.boards.models import SystemType, TaskStatus
+from apps.boards.task_status_services import TaskStatusService
 from apps.jobs.models import JobType
 from apps.jobs.services import JobService
 from apps.notifications.eligibility import (
@@ -36,12 +37,6 @@ class TelegramActionService:
         notification_job_id: int | None,
         status_id: int | None = None,
     ) -> dict:
-        exists = TelegramCallbackLog.objects.filter(
-            callback_query_id=callback_query_id,
-        ).exists()
-        if exists:
-            return {"status": "duplicate"}
-
         background_job = JobService.create(
             JobType.TELEGRAM_CALLBACK,
             {
@@ -52,6 +47,19 @@ class TelegramActionService:
         )
         JobService.mark_processing(background_job)
 
+        callback_log = TelegramActionService._create_callback_log(
+            callback_query_id=callback_query_id,
+            chat_id=chat_id,
+            telegram_user_id=telegram_user_id,
+            task_id=task_id,
+            action=action,
+            notification_job_id=notification_job_id,
+            status_id=status_id,
+        )
+        if callback_log is None:
+            JobService.succeed(background_job, {"status": "duplicate"})
+            return {"status": "duplicate"}
+
         try:
             result = TelegramActionService._execute(
                 action=action,
@@ -60,31 +68,44 @@ class TelegramActionService:
                 telegram_user_id=telegram_user_id,
             )
         except Exception as exc:
-            TelegramCallbackLog.objects.create(
-                telegram_user_id=telegram_user_id,
-                chat_id=chat_id,
-                callback_query_id=callback_query_id,
-                task_id=task_id,
-                action=action,
-                error_message=str(exc),
-            )
+            callback_log.task = Task.objects.filter(pk=task_id).first()
+            callback_log.error_message = str(exc)
+            callback_log.save(update_fields=["task", "error_message"])
             JobService.fail(background_job, str(exc))
             raise TelegramActionError(str(exc)) from exc
 
-        TelegramCallbackLog.objects.create(
-            telegram_user_id=telegram_user_id,
-            chat_id=chat_id,
-            callback_query_id=callback_query_id,
-            task=Task.objects.filter(pk=task_id).first(),
-            action=action,
-            payload={
-                "notification_job_id": notification_job_id,
-                "status_id": status_id,
-            },
-            processed_at=timezone.now(),
-        )
+        callback_log.task = Task.objects.filter(pk=task_id).first()
+        callback_log.processed_at = timezone.now()
+        callback_log.save(update_fields=["task", "processed_at"])
         JobService.succeed(background_job, result)
         return result
+
+    @staticmethod
+    def _create_callback_log(
+        *,
+        callback_query_id: str,
+        chat_id: str,
+        telegram_user_id: str,
+        task_id: int,
+        action: str,
+        notification_job_id: int | None,
+        status_id: int | None,
+    ) -> TelegramCallbackLog | None:
+        try:
+            with transaction.atomic():
+                return TelegramCallbackLog.objects.create(
+                    telegram_user_id=telegram_user_id,
+                    chat_id=chat_id,
+                    callback_query_id=callback_query_id,
+                    task_id=task_id,
+                    action=action,
+                    payload={
+                        "notification_job_id": notification_job_id,
+                        "status_id": status_id,
+                    },
+                )
+        except IntegrityError:
+            return None
 
     @staticmethod
     @transaction.atomic
@@ -143,11 +164,9 @@ class TelegramActionService:
         if target_status is None:
             raise TelegramActionError("Status is invalid")
 
-        if target_status.is_terminal and target_status.slug == "done":
+        if TaskStatusService.is_done_status(target_status):
             TaskCloseService.close_with_actor(task, actor=actor)
             return {"status": "closed"}
-
-        from apps.boards.task_status_services import TaskStatusService
 
         source_status = task.task_status
         if source_status is None:
@@ -190,10 +209,12 @@ class TelegramActionService:
 
         from apps.boards.task_status_services import TaskStatusService
 
-        process_status = TaskStatus.objects.filter(
-            board=task.board,
-            slug="process",
-        ).first()
+        process_status = TaskStatusService.resolve_status_for_system_type(
+            task.board,
+            system_types=(SystemType.IN_PROGRESS,),
+            prefer_slugs=("process",),
+            terminal_only=False,
+        )
         if process_status is None:
             raise TelegramActionError("No in-progress status configured")
 

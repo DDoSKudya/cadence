@@ -29,6 +29,23 @@ def test_auth_ec_invalid_api_key_rejected(client):
 
 
 @pytest.mark.django_db
+def test_auth_ec_default_superuser_can_login(client, django_user_model):
+    admin = django_user_model.objects.get(username="admin")
+    assert admin.is_superuser
+    assert admin.is_staff
+
+    login = client.post(
+        reverse("auth-login"),
+        {"username": "admin", "password": "admin"},
+        content_type="application/json",
+    )
+    assert login.status_code == 200
+    me = client.get(reverse("auth-me"))
+    assert me.status_code == 200
+    assert me.json()["username"] == "admin"
+
+
+@pytest.mark.django_db
 def test_auth_ec_session_login_logout_me_flow(client, django_user_model):
     django_user_model.objects.create_user(username="alice", password="secret")
     login = client.post(

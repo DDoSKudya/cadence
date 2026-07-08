@@ -169,7 +169,13 @@ class AnalyticsExportDownloadView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        path = AnalyticsExportService.resolve_download_path(export_job)
+        try:
+            path = AnalyticsExportService.resolve_download_path(export_job)
+        except FileNotFoundError:
+            return Response(
+                {"detail": "Export file is unavailable."},
+                status=status.HTTP_409_CONFLICT,
+            )
         filename = path.name
         return FileResponse(path.open("rb"), as_attachment=True, filename=filename)
 

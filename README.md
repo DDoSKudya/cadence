@@ -7,7 +7,7 @@
     <strong>Персональный недельный Kanban для обучения и pet-проектов</strong><br>
   </p>
   <p>
-    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.1-111827?style=flat-square"></a>
+    <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.2.0-111827?style=flat-square"></a>
     <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white"></a>
     <a href="https://www.djangoproject.com/"><img alt="Django" src="https://img.shields.io/badge/Django-6.0-092E20?style=flat-square&logo=django&logoColor=white"></a>
     <a href="https://vuejs.org/"><img alt="Vue" src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white"></a>
@@ -19,6 +19,8 @@
   <a href="#быстрый-старт">Быстрый старт</a>
   ·
   <a href="#архитектура">Архитектура</a>
+  ·
+  <a href="#launcher">Launcher</a>
   ·
   <a href="#api">API</a>
   ·
@@ -62,6 +64,7 @@
       <strong>Start</strong><br>
       <a href="#быстрый-старт">Быстрый старт</a><br>
       <a href="#запуск">Запуск</a><br>
+      <a href="#launcher">Launcher</a><br>
       <a href="#переменные-окружения">Переменные окружения</a><br>
       <a href="#качество-кода">Качество кода</a>
     </td>
@@ -88,8 +91,10 @@
 
 ```bash
 cp .env.example .env
-make dev     # Docker: SPA + API на :8080
-make test    # ruff + mypy + pytest + vitest + build
+mise trust
+mise install
+mise run dev   # Docker: SPA + API на :8080
+mise run test  # ruff + mypy + pytest + vitest + build
 ```
 
 <table>
@@ -111,11 +116,11 @@ make test    # ruff + mypy + pytest + vitest + build
   </tr>
   <tr>
     <td><strong>Flower</strong></td>
-    <td><a href="http://localhost:5556">http://localhost:5556</a> (только <code>make dev</code>)</td>
+    <td><a href="http://localhost:5556">http://localhost:5556</a> (только <code>mise run dev</code>)</td>
   </tr>
   <tr>
     <td><strong>Vite</strong></td>
-    <td><a href="http://localhost:5173">http://localhost:5173</a> (только <code>make dev</code>)</td>
+    <td><a href="http://localhost:5173">http://localhost:5173</a> (только <code>mise run dev</code>)</td>
   </tr>
   <tr>
     <td><strong>Admin</strong></td>
@@ -123,7 +128,8 @@ make test    # ruff + mypy + pytest + vitest + build
   </tr>
 </table>
 
-Первый вход — создайте суперпользователя:
+По умолчанию после миграций создаётся суперпользователь `admin` / `admin`.
+Для своего аккаунта:
 
 ```bash
 docker compose exec backend uv run python manage.py createsuperuser
@@ -131,20 +137,51 @@ docker compose exec backend uv run python manage.py createsuperuser
 
 ## Запуск
 
-**Нужно:** Docker Compose, Node 22+ (для локального фронта), Python 3.12 + [uv](https://docs.astral.sh/uv/) (для локального бэкенда).
+**Нужно:** [mise](https://mise.jdx.dev/) и Docker Compose. `mise` сам подтянет Python 3.12, Node 22 и `uv` из конфигурации проекта.
 
-`make help` покажет все команды: `up`, `down`, `dev`, `test`, `lint`, `lint-install`.
+`mise tasks` покажет основные команды: `dev`, `up`, `down`, `lint`, `test`.
 
 ### Docker
 
 ```bash
 cp .env.example .env
-make dev    # разработка: foreground, логи в терминале
-make up     # production-like: baked SPA, gunicorn workers, detached
-make down   # остановить все профили
+mise run dev    # разработка: foreground, логи в терминале
+mise run up     # production-like: baked SPA, gunicorn workers, detached
+mise run down   # остановить все профили
 ```
 
 nginx слушает порт **8080**. Порт можно поменять через `NGINX_HTTP_PORT` в `.env`.
+
+Альтернатива CLI: desktop launcher (alpha) — см. раздел [Launcher](#launcher).
+
+## Launcher
+
+Вместо `mise run up` можно запустить Cadence через кроссплатформенный desktop launcher (alpha) в [`tools/launcher`](tools/launcher). Сейчас он управляет только production-like стеком (`docker compose --profile prod`).
+
+Что умеет launcher:
+
+- поднимать и останавливать prod-стек
+- показывать статус сервисов
+- открывать веб-интерфейс в браузере
+
+**Зависимости для launcher:**
+
+| Компонент | Зачем |
+| --- | --- |
+| [Docker](https://docs.docker.com/get-docker/) и Docker Compose v2 | запуск Cadence-стека |
+| [mise](https://mise.jdx.dev/) или Python 3.12+ | runtime launcher |
+| [uv](https://docs.astral.sh/uv/) | установка зависимостей launcher |
+| локальный clone репозитория Cadence | launcher ищет корень по `docker-compose.yml` |
+
+Запуск из исходников:
+
+```bash
+cd tools/launcher
+uv sync --extra dev
+uv run cadence-launcher
+```
+
+Launcher ищет корень репозитория автоматически. Если не найдёт, попросит выбрать папку вручную и запомнит выбор. Подробности — в [`tools/launcher/README.md`](tools/launcher/README.md) и [`docs/LAUNCHER_REFERENCE.md`](docs/LAUNCHER_REFERENCE.md).
 
 ### Локальная установка зависимостей
 
@@ -162,7 +199,7 @@ cd frontend && npm install && cd ..
 | Переменная                               | Зачем                                                                       |
 | ---------------------------------------- | --------------------------------------------------------------------------- |
 | `DJANGO_SECRET_KEY`                      | секрет Django; в production — сильное случайное значение                    |
-| `DJANGO_DEBUG`                           | `true` в dev, `false` в prod (`make up`)                                    |
+| `DJANGO_DEBUG`                           | `true` в dev, `false` в prod (`mise run up`)                                |
 | `DATABASE_URL`                           | PostgreSQL; по умолчанию `postgres://cadence:cadence@postgres:5432/cadence` |
 | `CELERY_BROKER_URL`                      | RabbitMQ для Celery                                                         |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ENABLED` | опциональный бот и напоминания                                              |
@@ -172,8 +209,7 @@ cd frontend && npm install && cd ..
 ### Качество кода
 
 ```bash
-make lint-install   # pre-commit + pre-push hooks
-make lint && make test
+mise run lint && mise run test
 ```
 
 CI прогоняет ruff, mypy, pytest (≥85% coverage), vue-tsc, Vitest и production build. Конфиг: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
@@ -376,7 +412,7 @@ curl -X POST http://localhost:8080/api/v1/tasks/ \
 ## Тесты
 
 ```bash
-make test
+mise run test
 ```
 
 | Слой     | Инструмент         | Покрытие                                             |
@@ -402,7 +438,7 @@ DJANGO_DEBUG=false
 CSRF_TRUSTED_ORIGINS=https://your-domain.example
 DJANGO_ALLOWED_HOSTS=your-domain.example
 
-make up
+mise run up
 ```
 
 Чеклист production — [docs/DEVELOPERS.md §14](docs/DEVELOPERS.md#14-production).
@@ -424,6 +460,6 @@ make up
 
 <div align="center">
 
-<sub>Cadence · v1.1.1 · Django · Vue · Celery · MIT</sub>
+<sub>Cadence · v1.2.0 · Django · Vue · Celery · MIT</sub>
 
 </div>
